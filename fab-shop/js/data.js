@@ -29,7 +29,10 @@
     { key: 'cut',    name: 'Plasma Table',  icon: '⚡', color: '#58c7ff', baseRate: 5.0, unlockLevel: 1, markerSpeed: 0.62 },
     { key: 'bend',   name: 'Press Brake',   icon: '⤵', color: '#ffd166', baseRate: 4.5, unlockLevel: 2, markerSpeed: 0.70 },
     { key: 'weld',   name: 'MIG Bay',       icon: '☀', color: '#ff8a1f', baseRate: 4.0, unlockLevel: 1, markerSpeed: 0.80 },
-    { key: 'finish', name: 'Grind & Paint', icon: '✨', color: '#4ade80', baseRate: 6.0, unlockLevel: 3, markerSpeed: 0.90 }
+    { key: 'finish', name: 'Grind & Paint', icon: '✨', color: '#4ade80', baseRate: 6.0, unlockLevel: 3, markerSpeed: 0.90 },
+    { key: 'laser',  name: 'Tube Laser',    icon: '◎', color: '#a78bfa', baseRate: 8.0, unlockLevel: 6, markerSpeed: 1.05 },
+    { key: 'mill',   name: 'CNC Mill',      icon: '⚙', color: '#2dd4bf', baseRate: 3.2, unlockLevel: 8, markerSpeed: 0.55 },
+    { key: 'coat',   name: 'Powder Coat',   icon: '❖', color: '#fb7185', baseRate: 5.5, unlockLevel: 9, markerSpeed: 0.75 }
   ];
 
   FAB.STATION_BY_KEY = {};
@@ -52,7 +55,19 @@
     { key: 'chassis',  name: 'Trailer Chassis',   level: 6, pay: 2700, days: 5, xp: 70,
       ops: [['cut', 850], ['bend', 550], ['weld', 1075], ['finish', 550]] },
     { key: 'hopper',   name: 'Conveyor Hopper',   level: 7, pay: 3400, days: 5, xp: 88,
-      ops: [['cut', 750], ['bend', 975], ['weld', 825], ['finish', 675]] }
+      ops: [['cut', 750], ['bend', 975], ['weld', 825], ['finish', 675]] },
+    { key: 'tuberack', name: 'Tube Frame Rack',   level: 6, pay: 2900, days: 4, xp: 100,
+      ops: [['laser', 520], ['bend', 360], ['weld', 420]] },
+    { key: 'fixture',  name: 'Fixture Plate',     level: 8, pay: 4200, days: 4, xp: 145,
+      ops: [['cut', 320], ['mill', 760], ['finish', 280]] },
+    { key: 'manifold', name: 'Manifold Block',    level: 9, pay: 5000, days: 4, xp: 175,
+      ops: [['mill', 980], ['finish', 320]] },
+    { key: 'skid',     name: 'Skid Base',         level: 9, pay: 7200, days: 5, xp: 230,
+      ops: [['laser', 640], ['bend', 420], ['weld', 760], ['coat', 480]] },
+    { key: 'mezz',     name: 'Mezzanine Kit',     level: 11, pay: 10500, days: 6, xp: 300,
+      ops: [['laser', 940], ['bend', 720], ['weld', 980], ['coat', 640]] },
+    { key: 'robocell', name: 'Robot Cell',        level: 12, pay: 15000, days: 6, xp: 400,
+      ops: [['laser', 1050], ['mill', 880], ['bend', 640], ['weld', 980], ['coat', 760]] }
   ];
 
   FAB.PRODUCT_BY_KEY = {};
@@ -96,8 +111,116 @@
 
   // XP needed to reach the next shop level.
   FAB.xpForLevel = function (level) {
-    return Math.round(110 * Math.pow(1.7, level - 1));
+    // Steep early so unlocks feel earned, flatter later so the heavy work
+    // tiers are reachable inside a single run.
+    var growth = level <= 5 ? 1.7 : 1.48;
+    return Math.round(110 * Math.pow(1.7, Math.min(level, 5) - 1) *
+                      Math.pow(growth, Math.max(0, level - 5)));
   };
+
+  /* ---- Prestige: sell up and open a bigger shop ----
+     Blueprints are the permanent currency. They carry a passive pay bonus and
+     buy perks that persist across relocations. */
+  FAB.PRESTIGE = {
+    currency: 'Blueprints',
+    minLevel: 9,              // every station is unlocked by here
+    scale: 12000,             // earnings per blueprint, before the square root
+    passivePayPerBlueprint: 0.02
+  };
+
+  // Blueprints earned by relocating right now, from this run's takings.
+  FAB.blueprintsFor = function (runEarned) {
+    return Math.floor(Math.sqrt(Math.max(0, runEarned) / FAB.PRESTIGE.scale));
+  };
+
+  /* Permanent perks. apply() runs once per level when a new run is set up,
+     so effects stack naturally with the level count. */
+  FAB.PERKS = [
+    {
+      key: 'capital',
+      name: 'Seed Capital',
+      desc: 'Open each new shop with more cash in the account.',
+      max: 5,
+      cost: function (n) { return [1, 2, 4, 7, 11][n]; },
+      detail: function (n) { return '+' + (2000 * n).toLocaleString('en-US') + ' starting cash'; },
+      apply: function (g) { g.money += 2000; }
+    },
+    {
+      key: 'tooling',
+      name: 'Tooling Library',
+      desc: 'Every machine starts a level higher.',
+      max: 3,
+      cost: function (n) { return [2, 4, 7][n]; },
+      detail: function (n) { return 'machines start at level ' + (1 + n); },
+      apply: function (g) { g.stations.forEach(function (st) { st.level += 1; }); }
+    },
+    {
+      key: 'union',
+      name: 'Union Hall',
+      desc: 'Hired operators work faster.',
+      max: 5,
+      cost: function (n) { return [2, 4, 7, 11, 16][n]; },
+      detail: function (n) { return '+' + (20 * n) + '% operator speed'; },
+      apply: function (g) { g.operatorMult += 0.20; }
+    },
+    {
+      key: 'master',
+      name: 'Master Fabricator',
+      desc: 'Unattended machines hold a higher standard.',
+      max: 4,
+      cost: function (n) { return [3, 6, 10, 15][n]; },
+      detail: function (n) { return 'auto quality floor ' + (58 + 6 * n); },
+      apply: function (g) { g.autoQualityPull += 6; }
+    },
+    {
+      key: 'standing',
+      name: 'Standing Orders',
+      desc: 'Every ticket on the board is worth more.',
+      max: 5,
+      cost: function (n) { return [2, 4, 7, 11, 16][n]; },
+      detail: function (n) { return '+' + (8 * n) + '% ticket pay'; },
+      apply: function (g) { g.payMult += 0.08; }
+    },
+    {
+      key: 'school',
+      name: 'Trade School',
+      desc: 'Your crew learns faster, so the shop levels faster.',
+      max: 4,
+      cost: function (n) { return [2, 5, 9, 14][n]; },
+      detail: function (n) { return '+' + (20 * n) + '% XP'; },
+      apply: function (g) { g.xpMult += 0.20; }
+    },
+    {
+      key: 'lean',
+      name: 'Lean Layout',
+      desc: 'Room for another job on the floor from day one.',
+      max: 3,
+      cost: function (n) { return [3, 7, 12][n]; },
+      detail: function (n) { return '+' + n + ' rack slots'; },
+      apply: function (g) { g.wipMax += 1; }
+    },
+    {
+      key: 'records',
+      name: 'Shop Records',
+      desc: 'Your track record opens the next shop further up the ladder.',
+      max: 4,
+      cost: function (n) { return [3, 6, 11, 18][n]; },
+      detail: function (n) { return 'new shops start at level ' + (1 + n); },
+      apply: function (g) { g.level += 1; }
+    },
+    {
+      key: 'ledger',
+      name: 'Reputation Ledger',
+      desc: 'Your name travels with you to the new shop.',
+      max: 3,
+      cost: function (n) { return [2, 5, 9][n]; },
+      detail: function (n) { return '+' + (8 * n) + ' starting reputation'; },
+      apply: function (g) { g.rep += 8; }
+    }
+  ];
+
+  FAB.PERK_BY_KEY = {};
+  FAB.PERKS.forEach(function (p) { FAB.PERK_BY_KEY[p.key] = p; });
 
   FAB.machineCost = function (level) {
     return Math.round(520 * Math.pow(1.8, level - 1));

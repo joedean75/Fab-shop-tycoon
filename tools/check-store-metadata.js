@@ -96,9 +96,15 @@ SHOTS.forEach(function (shot) {
   console.log('  ok    ' + art.label + '  ' + size.width + 'x' + size.height);
 });
 
-/* Placeholders must not reach a live listing. */
-['store', 'fab-shop'].forEach(function (dir) {
-  walk(path.join(ROOT, dir)).forEach(function (file) {
+/* Placeholders must not reach a live listing. Scanned across submitted
+   material only - store/README.md documents the placeholder on purpose. */
+['store/play/listing', 'store/play/whatsnew', 'store/appstore/listing',
+ 'store/appstore/app-privacy.md', 'store/appstore/review-notes.md',
+ 'store/play/data-safety.md', 'fab-shop'].forEach(function (dir) {
+  var target = path.join(ROOT, dir);
+  var files = fs.existsSync(target) && fs.statSync(target).isDirectory()
+    ? walk(target) : (fs.existsSync(target) ? [target] : []);
+  files.forEach(function (file) {
     if (!/\.(txt|md|html)$/.test(file)) return;
     var text = fs.readFileSync(file, 'utf8');
     if (text.indexOf('PLACEHOLDER_') !== -1) {

@@ -67,7 +67,9 @@ not loop the reload.
 
 - **Take orders** from the board. Rush jobs pay ~45% more on a tighter deadline.
   Your Steel Rack limits how many jobs can be on the floor at once.
-- **Jobs route themselves** to the next machine they need as bays free up.
+- **Jobs route themselves** to the next machine they need as bays free up. Seven
+  stations unlock as the shop levels: plasma table, press brake, MIG bay, grind
+  and paint, then the tube laser, CNC mill and powder coat line.
 - **Tap a running machine** when the orange marker crosses the green band. A
   perfect hit does about 4x the work of a mistimed one and raises the part's
   quality; sloppy taps drag quality down.
@@ -80,13 +82,22 @@ not loop the reload.
   work. Run out of cash and you take an emergency loan at the cost of
   reputation — the shop never closes.
 
-Progress is saved to `localStorage` automatically.
+- **Sell the shop** once you reach shop level 9, which is also when every
+  machine has been unlocked. You bank blueprints for what that shop earned
+  (`floor(sqrt(earned / 12000))`) and everything else resets. Blueprints buy
+  permanent perks that apply to every shop afterwards, and each blueprint ever
+  earned adds a passive 2% to pay — so spending them never sets you back.
+  Simulated over six relocations, runs compress from 39 in-game days to 26.
+
+Progress is saved to `localStorage` automatically. Saves written by 1.0.0 load
+cleanly: the new stations are appended, prestige fields default, and lifetime
+earnings seed the first relocation so existing work still counts.
 
 ## Layout
 
 | File | What it holds |
 | --- | --- |
-| `js/data.js` | Tuning constants, stations, products, upgrade definitions |
+| `js/data.js` | Tuning constants, stations, products, upgrade and perk definitions |
 | `js/game.js` | Simulation: time, routing, taps, payouts, day close, save/load |
 | `js/ui.js` | DOM rendering; reads state, never mutates it |
 | `js/main.js` | Boot and frame loop |

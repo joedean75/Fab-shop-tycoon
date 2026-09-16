@@ -40,16 +40,22 @@ var DEVICES = [
 function stageState() {
   FAB.reset();
   var g = FAB.game;
-  g.money = 18450;
-  g.day = 12;
-  g.rep = 78;
-  g.level = 5;
-  g.xp = Math.round(FAB.xpForLevel(5) * 0.55);
-  g.wipMax = 5;
+  g.money = 48450;
+  g.day = 26;
+  g.rep = 84;
+  g.level = 10;
+  g.xp = Math.round(FAB.xpForLevel(10) * 0.55);
+  g.wipMax = 6;
+  g.blueprints = 4;
+  g.blueprintsTotal = 9;
+  g.runs = 2;
+  g.runEarned = 512000;
+  g.perks = { capital: 2, tooling: 1, union: 1 };
   g.dayTime = FAB.TUNE.dayLength * 0.45;
   g.stats = { completed: 41, late: 2, earned: 39800, bestDay: 4200 };
 
-  var setup = { cut: [4, 2], bend: [3, 1], weld: [4, 1], finish: [2, 0] };
+  var setup = { cut: [4, 2], bend: [3, 1], weld: [4, 1], finish: [2, 0],
+                laser: [3, 1], mill: [2, 0], coat: [2, 1] };
   g.stations.forEach(function (st) {
     var s = setup[st.key];
     st.level = s[0];
@@ -62,8 +68,10 @@ function stageState() {
   // Put real work on the machines at photogenic progress.
   var plan = [
     { product: 'handrail', op: 2, pct: 0.62, quality: 88 },
-    { product: 'frame', op: 0, pct: 0.35, quality: 74 },
-    { product: 'stringer', op: 1, pct: 0.8, quality: 91 }
+    { product: 'tuberack', op: 0, pct: 0.45, quality: 81 },
+    { product: 'stringer', op: 1, pct: 0.8, quality: 91 },
+    { product: 'fixture', op: 1, pct: 0.3, quality: 76 },
+    { product: 'skid', op: 3, pct: 0.7, quality: 93 }
   ];
   g.jobs = [];
   plan.forEach(function (p, i) {
@@ -137,15 +145,20 @@ function serve(port) {
 
     var dir = path.join(ROOT, d.out);
     fs.mkdirSync(dir, { recursive: true });
+    // Clear old shots so a renamed scene never leaves an orphan behind.
+    fs.readdirSync(dir).forEach(function (f) {
+      if (/\.png$/.test(f)) fs.unlinkSync(path.join(dir, f));
+    });
 
     var shots = [
       { name: '1-shop-floor', prep: async function () { await page.click('.tab[data-view="floor"]'); } },
       { name: '2-order-board', prep: async function () { await page.click('.tab[data-view="orders"]'); } },
       { name: '3-upgrades', prep: async function () { await page.click('.tab[data-view="upgrades"]'); } },
-      { name: '4-day-report', prep: async function () {
+      { name: '4-expand', prep: async function () { await page.click('.tab[data-view="expand"]'); } },
+      { name: '5-day-report', prep: async function () {
           await page.click('.tab[data-view="floor"]');
           await page.evaluate(function () {
-            FAB.UI.showReport({ day: 12, jobs: 6, late: 0, revenue: 4820, overhead: 1180, net: 3640 });
+            FAB.UI.showReport({ day: 26, jobs: 9, late: 0, revenue: 21400, overhead: 3180, net: 18220 });
           });
         } }
     ];

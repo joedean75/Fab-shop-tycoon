@@ -30,6 +30,10 @@
     el.reportLines = $('report-lines');
     el.ordersBadge = $('tab-orders-badge');
     el.upgradesBadge = $('tab-upgrades-badge');
+    el.expandBadge = $('tab-expand-badge');
+    el.blueprintBar = $('blueprint-bar');
+    el.relocatePanel = $('relocate-panel');
+    el.perkList = $('perk-list');
 
     buildStations();
     bindTabs();
@@ -45,6 +49,8 @@
     el.boardList.addEventListener('click', onBoardClick);
     el.shopUps.addEventListener('click', onUpgradeClick);
     el.machineUps.addEventListener('click', onUpgradeClick);
+    el.perkList.addEventListener('click', onPerkClick);
+    el.relocatePanel.addEventListener('click', onRelocateClick);
   };
 
   UI.markDirty = function () { dirty = true; };
@@ -294,6 +300,86 @@
     el.upgradesBadge.classList.toggle('hidden', !affordable);
   }
 
+  function renderPrestige() {
+    var g = FAB.game;
+    var passive = Math.round(g.blueprintsTotal * FAB.PRESTIGE.passivePayPerBlueprint * 100);
+
+    el.blueprintBar.innerHTML =
+      '<div class="bp-stat"><span class="bp-value">' + g.blueprints + '</span>' +
+        '<span class="bp-label">Blueprints</span></div>' +
+      '<div class="bp-stat"><span class="bp-value">+' + passive + '%</span>' +
+        '<span class="bp-label">Pay bonus</span></div>' +
+      '<div class="bp-stat"><span class="bp-value">' + (g.runs + 1) + '</span>' +
+        '<span class="bp-label">Shop no.</span></div>';
+
+    var gain = FAB.prestigeGain();
+    var ready = FAB.canPrestige();
+    var body;
+
+    if (ready) {
+      body =
+        '<div class="relocate-gain">Sell up now for <strong>' + gain + ' blueprint' +
+          (gain === 1 ? '' : 's') + '</strong></div>' +
+        '<p class="relocate-note">This shop has taken in ' + money(g.runEarned) + '. ' +
+          'Relocating <b>resets cash, day, shop level, machines and their operators</b>, ' +
+          'and <b>keeps blueprints, permanent upgrades and your records</b>.</p>' +
+        '<button class="btn btn-primary" data-relocate="1">Sell the shop</button>';
+    } else if (g.level < FAB.PRESTIGE.minLevel) {
+      body =
+        '<div class="relocate-gain">Locked until shop level ' + FAB.PRESTIGE.minLevel + '</div>' +
+        '<p class="relocate-note">You are level ' + g.level + '. Build the shop up first - ' +
+          'relocating too early throws away more than it banks.</p>';
+    } else {
+      body =
+        '<div class="relocate-gain">Not worth relocating yet</div>' +
+        '<p class="relocate-note">This shop has taken in ' + money(g.runEarned) + '. ' +
+          'Your first blueprint lands at ' + money(FAB.nextBlueprintAt()) + '.</p>';
+    }
+    el.relocatePanel.className = 'relocate-panel' + (ready ? ' ready' : '');
+    el.relocatePanel.innerHTML = body;
+
+    el.perkList.innerHTML = FAB.PERKS.map(function (def) {
+      var owned = g.perks[def.key] || 0;
+      var maxed = owned >= def.max;
+      var cost = maxed ? 0 : def.cost(owned);
+      return '<div class="card' + (maxed ? ' maxed' : '') + '">' +
+        '<div class="card-body">' +
+          '<div class="card-title">' + def.name + ' \u00B7 ' + owned + '/' + def.max + '</div>' +
+          '<div class="card-sub">' + def.desc + '</div>' +
+          (owned ? '<div class="perk-owned">Now: ' + def.detail(owned) + '</div>' : '') +
+        '</div>' +
+        (maxed
+          ? '<div class="card-sub">MAX</div>'
+          : '<button class="btn btn-small bp-cost" data-perk="' + def.key + '"' +
+            (g.blueprints < cost ? ' disabled' : '') + '>' + cost + ' \u25C8</button>') +
+      '</div>';
+    }).join('');
+
+    var canBuy = FAB.PERKS.some(function (def) {
+      var owned = g.perks[def.key] || 0;
+      return owned < def.max && g.blueprints >= def.cost(owned);
+    });
+    el.expandBadge.classList.toggle('hidden', !(ready || canBuy));
+  }
+
+  function onPerkClick(ev) {
+    var btn = ev.target.closest('button[data-perk]');
+    if (!btn) return;
+    FAB.buyPerk(btn.dataset.perk);
+    UI.markDirty();
+  }
+
+  function onRelocateClick(ev) {
+    if (!ev.target.closest('button[data-relocate]')) return;
+    var gain = FAB.prestigeGain();
+    if (window.confirm('Sell this shop for ' + gain + ' blueprint' + (gain === 1 ? '' : 's') +
+        '?\n\nCash, day, shop level and machines reset. Blueprints and permanent ' +
+        'upgrades carry over.')) {
+      FAB.doPrestige();
+      UI.markDirty();
+    }
+  }
+
   function onBoardClick(ev) {
     var btn = ev.target.closest('button[data-accept]');
     if (!btn) return;
@@ -353,6 +439,7 @@
       renderRack();
       renderBoard();
       renderUpgrades();
+      renderPrestige();
     }
 
     el.money.textContent = money(g.money);
@@ -404,6 +491,7 @@
       else if (ev.type === 'dirty') dirty = true;
       else if (ev.type === 'money') UI.flash(el.money, 'flash-good');
       else if (ev.type === 'dayEnd') { UI.showReport(ev.report); dirty = true; }
+      else if (ev.type === 'prestige') { dirty = true; }
     }
   };
 

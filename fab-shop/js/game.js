@@ -35,7 +35,10 @@
     };
   }
 
-  FAB.newGame = function () {
+  /* A run is everything a relocation wipes. Meta is what survives it:
+     blueprints, the perks they bought, and lifetime records. */
+  function startRun(meta) {
+    meta = meta || {};
     var g = {
       money: T.startMoney,
       day: 1,
@@ -47,17 +50,48 @@
       tapMult: 1,
       payMult: 1,
       qualityBonus: 0,
+      operatorMult: 1,
+      xpMult: 1,
+      autoQualityPull: T.autoQualityPull,
       stations: FAB.STATIONS.map(makeStation),
       jobs: [],
       board: [],
       upgrades: {},
       ledger: { revenue: 0, jobs: 0, late: 0 },
-      stats: { completed: 0, late: 0, earned: 0, bestDay: 0 }
+      runEarned: 0,
+      // --- meta ---
+      blueprints: meta.blueprints || 0,
+      blueprintsTotal: meta.blueprintsTotal || 0,
+      perks: meta.perks || {},
+      runs: meta.runs || 0,
+      stats: meta.stats || { completed: 0, late: 0, earned: 0, bestDay: 0, bestRun: 0 }
     };
     FAB.game = g;
+    applyPerks(g);
     restockBoard();
     return g;
-  };
+  }
+
+  /* Perks are written as a single level's worth of effect, applied once per
+     level owned - so buying one mid-run and rebuilding a run both go through
+     the same code path. */
+  function applyPerk(g, key, times) {
+    var def = FAB.PERK_BY_KEY[key];
+    if (!def) return;
+    for (var i = 0; i < times; i++) def.apply(g);
+  }
+
+  function applyPerks(g) {
+    Object.keys(g.perks || {}).forEach(function (key) {
+      applyPerk(g, key, g.perks[key]);
+    });
+    // Passive bonus rides on blueprints ever earned, so spending them on
+    // perks never makes you worse off.
+    g.payMult += g.blueprintsTotal * FAB.PRESTIGE.passivePayPerBlueprint;
+  }
+
+  FAB.newGame = function () { return startRun(null); };
+  FAB.startRun = startRun;
 
   /* ---------- lookups ---------- */
 
@@ -213,6 +247,8 @@
     g.ledger.jobs += 1;
     g.stats.completed += 1;
     g.stats.earned += payout;
+    g.runEarned += payout;
+    if (g.runEarned > g.stats.bestRun) g.stats.bestRun = g.runEarned;
 
     if (late) {
       g.ledger.late += 1;
@@ -240,7 +276,7 @@
 
   function addXp(amount) {
     var g = FAB.game;
-    g.xp += amount;
+    g.xp += Math.round(amount * g.xpMult);
     while (g.xp >= FAB.xpForLevel(g.level)) {
       g.xp -= FAB.xpForLevel(g.level);
       g.level += 1;
@@ -367,7 +403,7 @@
       }
 
       if (st.operators > 0) {
-        var rate = st.operators * def.baseRate * FAB.rateMult(st);
+        var rate = st.operators * def.baseRate * FAB.rateMult(st) * g.operatorMult;
         var count = FAB.slotCount(st);
         for (var s = 0; s < count; s++) {
           var id = st.slots[s];
@@ -375,7 +411,7 @@
           var job = jobByUid(id);
           if (!job) { st.slots[s] = null; continue; }
           job.progress += rate * dt;
-          job.quality += (T.autoQualityPull - job.quality) * T.autoQualityRate * dt;
+          job.quality += (g.autoQualityPull - job.quality) * T.autoQualityRate * dt;
           if (job.progress >= currentOp(job)[1]) advanceJob(job);
         }
       }
@@ -440,6 +476,68 @@
     return true;
   };
 
+  /* ---------- prestige ---------- */
+
+  FAB.prestigeGain = function () {
+    return FAB.blueprintsFor(FAB.game.runEarned);
+  };
+
+  FAB.canPrestige = function () {
+    return FAB.game.level >= FAB.PRESTIGE.minLevel && FAB.prestigeGain() >= 1;
+  };
+
+  // How much more this run has to take in before the next blueprint lands.
+  FAB.nextBlueprintAt = function () {
+    var next = FAB.prestigeGain() + 1;
+    return Math.ceil(next * next * FAB.PRESTIGE.scale);
+  };
+
+  FAB.doPrestige = function () {
+    var g = FAB.game;
+    if (!FAB.canPrestige()) {
+      emit('toast', { text: 'Not enough behind you yet to sell up.', tone: 'bad' });
+      return false;
+    }
+    var gain = FAB.prestigeGain();
+    var meta = {
+      blueprints: g.blueprints + gain,
+      blueprintsTotal: g.blueprintsTotal + gain,
+      perks: g.perks,
+      runs: g.runs + 1,
+      stats: g.stats
+    };
+    startRun(meta);
+    emit('toast', {
+      text: 'Sold the shop. +' + gain + ' blueprint' + (gain === 1 ? '' : 's') +
+            ' - shop #' + (meta.runs + 1) + ' is open.',
+      tone: 'good'
+    });
+    emit('prestige', { gain: gain });
+    emit('dirty');
+    FAB.save();
+    return true;
+  };
+
+  FAB.buyPerk = function (key) {
+    var g = FAB.game;
+    var def = FAB.PERK_BY_KEY[key];
+    if (!def) return false;
+    var owned = g.perks[key] || 0;
+    if (owned >= def.max) return false;
+    var cost = def.cost(owned);
+    if (g.blueprints < cost) {
+      emit('toast', { text: 'Not enough blueprints.', tone: 'bad' });
+      return false;
+    }
+    g.blueprints -= cost;
+    g.perks[key] = owned + 1;
+    applyPerk(g, key, 1);   // takes effect on the current shop too
+    emit('toast', { text: def.name + ' \u2013 ' + def.detail(owned + 1), tone: 'good' });
+    emit('dirty');
+    FAB.save();
+    return true;
+  };
+
   /* ---------- persistence ---------- */
 
   FAB.save = function () {
@@ -472,6 +570,21 @@
         if (typeof st.marker !== 'number') st.marker = 0;
         if (typeof st.dir !== 'number') st.dir = 1;
       });
+      // Saves from before the prestige update lack these entirely.
+      var g = FAB.game;
+      var defaults = {
+        operatorMult: 1, xpMult: 1, autoQualityPull: T.autoQualityPull,
+        runEarned: 0, blueprints: 0, blueprintsTotal: 0, runs: 0
+      };
+      Object.keys(defaults).forEach(function (k) {
+        if (typeof g[k] !== 'number') g[k] = defaults[k];
+      });
+      if (!g.perks) g.perks = {};
+      if (!g.stats) g.stats = { completed: 0, late: 0, earned: 0, bestDay: 0, bestRun: 0 };
+      if (typeof g.stats.bestRun !== 'number') g.stats.bestRun = 0;
+      // An old save has earnings but no run total; seed it so the first
+      // relocation credits work already done.
+      if (!g.runEarned && g.stats.earned) g.runEarned = g.stats.earned;
       if (!FAB.game.board || !FAB.game.board.length) restockBoard();
       // Keep uid ahead of everything the save already used.
       FAB.game.jobs.concat(FAB.game.board).forEach(function (o) {
