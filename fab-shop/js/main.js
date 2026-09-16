@@ -52,7 +52,8 @@
     // Block the double-tap-to-zoom gesture so fast tapping stays fast.
     document.addEventListener('dblclick', function (ev) { ev.preventDefault(); });
 
-    if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
+    var isNative = FAB.native && FAB.native.active;
+    if (!isNative && 'serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
       // A player already running an old build gets the new one on the next load.
       var hadController = !!navigator.serviceWorker.controller;
       var reloaded = false;

@@ -23,6 +23,14 @@ To install it as an app: open it over HTTPS and use the browser's
 Opening `index.html` straight off the filesystem works too — you just lose the
 offline service worker, which browsers only run over http/https.
 
+## Mobile builds
+
+The same files ship to the App Store and Google Play through Capacitor - see
+[`store/README.md`](../store/README.md) for the full submission runbook. The
+native projects live in `ios/` and `android/`; `npx cap sync` copies this
+directory into both. `js/native.js` adapts the game to a native shell (splash,
+status bar, Android back button) and no-ops in a browser.
+
 ## Deploy
 
 The game is a static bundle - `fab-shop/` is the whole site, with no build

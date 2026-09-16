@@ -1,0 +1,71 @@
+name: Mobile build check
+
+on:
+  pull_request:
+    paths: ['fab-shop/**', 'android/**', 'ios/**', 'tools/**', 'package.json', 'capacitor.config.json']
+  push:
+    branches: [main]
+    paths: ['fab-shop/**', 'android/**', 'ios/**', 'tools/**', 'package.json', 'capacitor.config.json']
+  workflow_dispatch:
+
+jobs:
+  web:
+    name: Web bundle
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20', cache: 'npm' }
+      - run: npm ci
+      - name: Verify the static bundle
+        run: npm run verify
+      - name: Versions must be in sync across platforms
+        run: node tools/set-version.js --check
+
+  android:
+    name: Android (debug build)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20', cache: 'npm' }
+      - uses: actions/setup-java@v4
+        with: { distribution: 'temurin', java-version: '21' }
+      - uses: android-actions/setup-android@v3
+      - run: npm ci
+      - name: Copy the web build into the native project
+        run: npx cap sync android
+      - name: Assemble debug APK
+        working-directory: android
+        run: ./gradlew assembleDebug --no-daemon
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fab-shop-debug-apk
+          path: android/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+
+  ios:
+    # macOS runners are expensive, so this does not run on every pull request.
+    name: iOS (compile, unsigned)
+    if: github.event_name != 'pull_request'
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20', cache: 'npm' }
+      - run: npm ci
+      - name: Copy the web build into the native project
+        run: npx cap sync ios
+      - name: Install CocoaPods dependencies
+        working-directory: ios/App
+        run: pod install --repo-update
+      - name: Build for simulator without signing
+        working-directory: ios/App
+        run: |
+          xcodebuild -workspace App.xcworkspace \
+            -scheme App \
+            -configuration Release \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
+            build | xcpretty || exit ${PIPESTATUS[0]}

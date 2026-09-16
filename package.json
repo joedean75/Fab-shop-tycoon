@@ -1,0 +1,30 @@
+{
+  "name": "fab-shop-tycoon",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Fab Shop Tycoon - run a metal fabrication shop. Web, iOS and Android from one source.",
+  "scripts": {
+    "verify": "node tools/verify-deploy.js",
+    "smoke": "node tools/smoke-live.js",
+    "assets": "node tools/make-assets.js",
+    "shots": "node tools/make-screenshots.js",
+    "version:set": "node tools/set-version.js",
+    "sync": "npm run verify && cap sync",
+    "android:open": "cap open android",
+    "ios:open": "cap open ios",
+    "check:store": "node tools/check-store-metadata.js",
+    "check": "npm run verify && node tools/set-version.js --check && npm run check:store"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.0.0",
+    "@capacitor/app": "^8.0.0",
+    "@capacitor/core": "^8.0.0",
+    "@capacitor/ios": "^8.0.0",
+    "@capacitor/splash-screen": "^8.0.0",
+    "@capacitor/status-bar": "^8.0.0"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.0.0",
+    "playwright": "^1.56.1"
+  }
+}

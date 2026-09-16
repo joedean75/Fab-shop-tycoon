@@ -1,0 +1,1 @@
+tycoon,idle,factory,welding,manager,fabrication,metal,workshop,business,timing,shop
