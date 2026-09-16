@@ -7,6 +7,9 @@ ship before the deadline — or eat the late penalty.
 Built as a plain HTML/CSS/JS PWA: no build step, no dependencies, installable to
 a phone home screen, and playable offline once it has loaded.
 
+**Live: https://fab-shop-tycoon.onrender.com** - deployed from this branch on
+Render, redeploying automatically on every push.
+
 ## Play
 
 ```sh
