@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Fab Shop Tycoon">
+  <rect width="512" height="512" rx="96" fill="#14181d"/>
+  <path d="M96 352h320" stroke="#333d49" stroke-width="20" stroke-linecap="round"/>
+  <path d="M150 352V214l58-42 58 42v138" fill="none" stroke="#94a3b2" stroke-width="20" stroke-linejoin="round"/>
+  <path d="M286 352V258h90v94" fill="none" stroke="#94a3b2" stroke-width="20" stroke-linejoin="round"/>
+  <circle cx="208" cy="268" r="30" fill="#ff8a1f"/>
+  <path d="M208 132l-26 66h34l-22 62 60-80h-34z" fill="#ffd166"/>
+  <path d="M120 400h272" stroke="#ff8a1f" stroke-width="16" stroke-linecap="round"/>
+</svg>

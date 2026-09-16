@@ -1,0 +1,14 @@
+{
+  "name": "Fab Shop Tycoon",
+  "short_name": "Fab Shop",
+  "description": "Run a metal fabrication shop: cut, bend, weld, ship.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "portrait",
+  "background_color": "#14181d",
+  "theme_color": "#14181d",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

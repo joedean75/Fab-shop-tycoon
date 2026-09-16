@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#14181d">
+<meta name="description" content="Fab Shop Tycoon - run a metal fabrication shop: cut, bend, weld, ship.">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Fab Shop Tycoon</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="hud">
+  <div class="hud-row">
+    <div class="stat stat-money"><span class="stat-label">Cash</span><span id="hud-money" class="stat-value">$0</span></div>
+    <div class="stat"><span class="stat-label">Day</span><span id="hud-day" class="stat-value">1</span></div>
+    <div class="stat"><span class="stat-label">Rep</span><span id="hud-rep" class="stat-value">50</span></div>
+    <div class="stat"><span class="stat-label">Shop Lv</span><span id="hud-level" class="stat-value">1</span></div>
+  </div>
+  <div class="daybar" aria-hidden="true"><div id="daybar-fill" class="daybar-fill"></div></div>
+  <div class="xpbar" aria-hidden="true"><div id="xpbar-fill" class="xpbar-fill"></div></div>
+</header>
+
+<main id="views">
+
+  <section id="view-floor" class="view is-active">
+    <div class="view-head">
+      <h2>Shop Floor</h2>
+      <p class="hint">Tap a running machine when the marker hits the green band.</p>
+    </div>
+    <div id="stations" class="stations"></div>
+    <div class="rack">
+      <h3>Steel Rack <span id="rack-count" class="pill">0/3</span></h3>
+      <div id="rack-list" class="rack-list"></div>
+    </div>
+  </section>
+
+  <section id="view-orders" class="view">
+    <div class="view-head">
+      <h2>Order Board</h2>
+      <p class="hint">New work posts every morning. Unclaimed jobs expire at day's end.</p>
+    </div>
+    <div id="board-list" class="board-list"></div>
+  </section>
+
+  <section id="view-upgrades" class="view">
+    <div class="view-head">
+      <h2>Upgrades</h2>
+      <p class="hint">Machines run faster. Operators run them while you sleep.</p>
+    </div>
+    <div id="upgrade-shop" class="upgrade-list"></div>
+    <div id="upgrade-machines" class="upgrade-list"></div>
+    <div class="danger-zone">
+      <button id="btn-reset" class="btn btn-ghost" type="button">Reset shop</button>
+    </div>
+  </section>
+
+</main>
+
+<nav class="tabbar" role="tablist">
+  <button class="tab is-active" data-view="floor" role="tab" type="button"><span class="tab-icon">&#9881;</span>Floor</button>
+  <button class="tab" data-view="orders" role="tab" type="button"><span class="tab-icon">&#128203;</span>Orders<span id="tab-orders-badge" class="badge hidden">0</span></button>
+  <button class="tab" data-view="upgrades" role="tab" type="button"><span class="tab-icon">&#128736;</span>Upgrades<span id="tab-upgrades-badge" class="badge hidden">!</span></button>
+</nav>
+
+<div id="toasts" class="toasts" aria-live="polite"></div>
+
+<div id="report" class="report hidden" role="dialog" aria-modal="true" aria-labelledby="report-title">
+  <div class="report-card">
+    <h2 id="report-title">Day 1 closed</h2>
+    <dl id="report-lines" class="report-lines"></dl>
+    <button id="report-ok" class="btn btn-primary" type="button">Open the shop</button>
+  </div>
+</div>
+
+<script src="js/data.js"></script>
+<script src="js/game.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
