@@ -1,0 +1,27 @@
+# Netlify: publish the game directory, verified before it goes live.
+[build]
+  publish = "fab-shop"
+  command = "node tools/verify-deploy.js"
+
+# The service worker and the page that registers it must never be served
+# stale, or players stay pinned to an old build.
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "no-cache"
+
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "no-cache"
+
+[[headers]]
+  for = "/manifest.webmanifest"
+  [headers.values]
+    Cache-Control = "no-cache"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "no-referrer"

@@ -53,6 +53,15 @@
     document.addEventListener('dblclick', function (ev) { ev.preventDefault(); });
 
     if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
+      // A player already running an old build gets the new one on the next load.
+      var hadController = !!navigator.serviceWorker.controller;
+      var reloaded = false;
+      navigator.serviceWorker.addEventListener('controllerchange', function () {
+        if (!hadController || reloaded) return;   // first install: nothing to refresh
+        reloaded = true;
+        FAB.save();
+        location.reload();
+      });
       navigator.serviceWorker.register('sw.js').catch(function () { /* offline play is optional */ });
     }
   }

@@ -20,6 +20,32 @@ To install it as an app: open it over HTTPS and use the browser's
 Opening `index.html` straight off the filesystem works too — you just lose the
 offline service worker, which browsers only run over http/https.
 
+## Deploy
+
+The game is a static bundle - `fab-shop/` is the whole site, with no build
+step. `node tools/verify-deploy.js` checks it before it ships (missing files,
+root-absolute paths that break subpath hosting, a service worker precaching
+something that no longer exists, an unparseable manifest, JS that does not
+parse) and exits non-zero so a bad bundle never goes live.
+
+| Target | What to do |
+| --- | --- |
+| **GitHub Pages** | Already wired: `.github/workflows/pages.yml` verifies and deploys on every push to `main` that touches the game. Enable it once under Settings -> Pages -> Source: **GitHub Actions**. Serves at `https://<user>.github.io/<repo>/`. |
+| **Netlify** | `netlify.toml` sets publish dir, build verification and cache headers. Connect the repo, or `netlify deploy --prod --dir=fab-shop`. |
+| **Render** | `render.yaml` is a Blueprint for a static site. New -> Blueprint, point it at the repo. |
+| **Anything else** | Copy `fab-shop/` to any static host. Relative paths throughout, so a subdirectory works fine. |
+
+Two host settings matter, and the configs above already set them: `sw.js` and
+`index.html` must be served `Cache-Control: no-cache`, or installed players
+stay pinned to an old build.
+
+### Releasing a change
+
+Bump `VERSION` in `fab-shop/sw.js`. That invalidates the old cache; the page
+picks up the new worker, refreshes itself once, and saved games carry over.
+Verified end to end: a redeploy swaps the cache, drops the stale one, and does
+not loop the reload.
+
 ## How it plays
 
 - **Take orders** from the board. Rush jobs pay ~45% more on a tighter deadline.
