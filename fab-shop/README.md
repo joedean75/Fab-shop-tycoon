@@ -35,6 +35,12 @@ parse) and exits non-zero so a bad bundle never goes live.
 | **Render** | `render.yaml` is a Blueprint for a static site. New -> Blueprint, point it at the repo. |
 | **Anything else** | Copy `fab-shop/` to any static host. Relative paths throughout, so a subdirectory works fine. |
 
+After a deploy, `node tools/smoke-live.js <url>` checks what the host actually
+serves: every asset the page references returns 200, scripts and styles come
+back with the right content type, and the manifest is served as JSON - a
+manifest served as `binary/octet-stream` returns 200 but silently costs you
+"Add to Home Screen". The Pages workflow runs it against the published URL.
+
 Two host settings matter, and the configs above already set them: `sw.js` and
 `index.html` must be served `Cache-Control: no-cache`, or installed players
 stay pinned to an old build.

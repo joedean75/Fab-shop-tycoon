@@ -16,7 +16,7 @@
     Cache-Control = "no-cache"
 
 [[headers]]
-  for = "/manifest.webmanifest"
+  for = "/manifest.json"
   [headers.values]
     Cache-Control = "no-cache"
 

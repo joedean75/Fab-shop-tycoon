@@ -48,7 +48,7 @@ refs.filter(function (ref) {
 
 /* 2. Nothing may be root-absolute: the game has to work under /fab-shop/ on
       GitHub Pages as well as at a domain root. */
-['index.html', 'css/style.css', 'js/main.js', 'sw.js', 'manifest.webmanifest'].forEach(function (rel) {
+['index.html', 'css/style.css', 'js/main.js', 'sw.js', 'manifest.json'].forEach(function (rel) {
   if (!exists(rel)) { fail('required file is missing from the bundle: ' + rel); return; }
   var body = read(rel);
   var bad = body.match(/(?:src|href)="\/[^\/]|url\(\s*\/[^\/]|"start_url"\s*:\s*"\//g);
@@ -57,16 +57,16 @@ refs.filter(function (ref) {
 
 /* 3. Manifest must parse and point at real icons. */
 var manifest = null;
-if (exists('manifest.webmanifest')) {
+if (exists('manifest.json')) {
   try {
-    manifest = JSON.parse(read('manifest.webmanifest'));
+    manifest = JSON.parse(read('manifest.json'));
   } catch (err) {
-    fail('manifest.webmanifest is not valid JSON: ' + err.message);
+    fail('manifest.json is not valid JSON: ' + err.message);
   }
 }
 if (manifest) {
   ['name', 'start_url', 'icons', 'display'].forEach(function (key) {
-    if (!manifest[key]) fail('manifest.webmanifest is missing "' + key + '"');
+    if (!manifest[key]) fail('manifest.json is missing "' + key + '"');
   });
   (manifest.icons || []).forEach(function (icon) {
     var src = String(icon.src).replace(/^\.\//, '');

@@ -43,3 +43,8 @@ jobs:
           path: fab-shop
       - id: deployment
         uses: actions/deploy-pages@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Smoke-test what was actually published
+        run: node tools/smoke-live.js "${{ steps.deployment.outputs.page_url }}"

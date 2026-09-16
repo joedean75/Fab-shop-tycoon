@@ -13,7 +13,7 @@ services:
       - path: /index.html
         name: Cache-Control
         value: no-cache
-      - path: /manifest.webmanifest
+      - path: /manifest.json
         name: Cache-Control
         value: no-cache
       - path: /*

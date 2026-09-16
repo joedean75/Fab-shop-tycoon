@@ -13,7 +13,7 @@ var SHELL = [
   './js/ui.js',
   './js/main.js',
   './icon.svg',
-  './manifest.webmanifest'
+  './manifest.json'
 ];
 
 self.addEventListener('install', function (ev) {
