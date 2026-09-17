@@ -1,0 +1,20 @@
+<!-- Adaptive-icon foreground: art only, transparent, inside the 66% safe zone. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="spark" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffd166"/>
+      <stop offset="1" stop-color="#ff8a1f"/>
+    </linearGradient>
+  </defs>
+  <g transform="translate(256 256) scale(0.62) translate(-256 -256)">
+    <g stroke-linecap="round" stroke-linejoin="round" fill="none">
+      <path d="M142 356V218l60-44 60 44v138" stroke="#c8d3de" stroke-width="26"/>
+      <path d="M286 356V256h84v100" stroke="#8a99a8" stroke-width="26"/>
+      <path d="M96 356h320" stroke="#5d6c7d" stroke-width="26"/>
+      <path d="M120 404h272" stroke="#ff8a1f" stroke-width="22"/>
+    </g>
+    <circle cx="202" cy="272" r="34" fill="#58c7ff" opacity=".25"/>
+    <circle cx="202" cy="272" r="20" fill="#58c7ff"/>
+    <path d="M258 96l-34 92h44l-30 84 84-112h-46l26-64z" fill="url(#spark)"/>
+  </g>
+</svg>

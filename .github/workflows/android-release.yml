@@ -1,0 +1,77 @@
+name: Android release (Play)
+
+# Tag a release (v1.0.0) or run manually. Produces a signed .aab for Play.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      track:
+        description: 'Play track to upload to (none = build artifact only)'
+        required: false
+        default: 'none'
+        type: choice
+        options: ['none', 'internal', 'alpha', 'beta', 'production']
+
+jobs:
+  bundle:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20', cache: 'npm' }
+      - uses: actions/setup-java@v4
+        with: { distribution: 'temurin', java-version: '21' }
+      - uses: android-actions/setup-android@v3
+
+      - run: npm ci
+      - name: Verify the web bundle before it is packaged
+        run: npm run verify
+      - name: Versions must be in sync
+        run: node tools/set-version.js --check
+      - name: Listing copy, screenshots and placeholders
+        run: npm run check:store
+      - run: npx cap sync android
+
+      - name: Decode the upload keystore
+        id: keystore
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$KEYSTORE_B64" ]; then
+            echo "signed=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::ANDROID_KEYSTORE_BASE64 is not set - building an unsigned bundle."
+          else
+            echo "$KEYSTORE_B64" | base64 -d > "${RUNNER_TEMP}/upload.jks"
+            echo "signed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build release bundle
+        working-directory: android
+        env:
+          ANDROID_KEYSTORE_PATH: ${{ steps.keystore.outputs.signed == 'true' && format('{0}/upload.jks', runner.temp) || '' }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: ./gradlew bundleRelease --no-daemon
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fab-shop-release-aab
+          path: android/app/build/outputs/bundle/release/*.aab
+          if-no-files-found: error
+
+      # Requires a Play service account JSON with "Release manager" access.
+      - name: Upload to Play
+        if: >-
+          github.event_name == 'workflow_dispatch' &&
+          inputs.track != 'none' &&
+          steps.keystore.outputs.signed == 'true'
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: com.fabshoptycoon.game
+          releaseFiles: android/app/build/outputs/bundle/release/app-release.aab
+          track: ${{ inputs.track }}
+          status: completed
+          whatsNewDirectory: store/play/whatsnew

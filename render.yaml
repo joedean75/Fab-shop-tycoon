@@ -1,0 +1,21 @@
+# Render Blueprint: static site, verified at build time.
+services:
+  - type: web
+    name: fab-shop-tycoon
+    runtime: static
+    buildCommand: node tools/verify-deploy.js
+    staticPublishPath: ./fab-shop
+    headers:
+      # Never serve a stale worker or shell - it pins players to an old build.
+      - path: /sw.js
+        name: Cache-Control
+        value: no-cache
+      - path: /index.html
+        name: Cache-Control
+        value: no-cache
+      - path: /manifest.json
+        name: Cache-Control
+        value: no-cache
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff

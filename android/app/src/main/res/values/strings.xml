@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Fab Shop Tycoon</string>
+    <string name="title_activity_main">Fab Shop Tycoon</string>
+    <string name="package_name">com.fabshoptycoon.game</string>
+    <string name="custom_url_scheme">com.fabshoptycoon.game</string>
+</resources>

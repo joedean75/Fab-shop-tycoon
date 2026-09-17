@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1d232a"/>
+      <stop offset="1" stop-color="#14181d"/>
+    </linearGradient>
+    <linearGradient id="spark" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffd166"/>
+      <stop offset="1" stop-color="#ff8a1f"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <g stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <!-- shop roofline -->
+    <path d="M142 356V218l60-44 60 44v138" stroke="#94a3b2" stroke-width="22"/>
+    <path d="M286 356V256h84v100" stroke="#5d6c7d" stroke-width="22"/>
+    <!-- floor -->
+    <path d="M96 356h320" stroke="#333d49" stroke-width="22"/>
+    <path d="M120 404h272" stroke="#ff8a1f" stroke-width="18"/>
+  </g>
+  <!-- arc glow + weld spark -->
+  <circle cx="202" cy="272" r="34" fill="#58c7ff" opacity=".22"/>
+  <circle cx="202" cy="272" r="20" fill="#58c7ff"/>
+  <path d="M258 96l-34 92h44l-30 84 84-112h-46l26-64z" fill="url(#spark)"/>
+</svg>

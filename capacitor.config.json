@@ -1,0 +1,28 @@
+{
+  "appId": "com.fabshoptycoon.game",
+  "appName": "Fab Shop Tycoon",
+  "webDir": "fab-shop",
+  "backgroundColor": "#14181d",
+  "android": {
+    "backgroundColor": "#14181d",
+    "allowMixedContent": false
+  },
+  "ios": {
+    "backgroundColor": "#14181d",
+    "contentInset": "never",
+    "scrollEnabled": false
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchAutoHide": false,
+      "backgroundColor": "#14181d",
+      "androidScaleType": "CENTER_CROP",
+      "showSpinner": false
+    },
+    "StatusBar": {
+      "overlaysWebView": false,
+      "style": "DARK",
+      "backgroundColor": "#14181d"
+    }
+  }
+}
