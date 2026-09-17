@@ -68,16 +68,15 @@ jobs:
       - run: npm ci
       - name: Copy the web build into the native project
         run: npx cap sync ios
-      - name: Install CocoaPods dependencies
-        working-directory: ios/App
-        run: pod install --repo-update
+      # Capacitor 8 uses Swift Package Manager, not CocoaPods: there is no
+      # Podfile and no .xcworkspace, so build the project directly.
       - name: Build for simulator without signing
         working-directory: ios/App
         run: |
-          xcodebuild -workspace App.xcworkspace \
+          xcodebuild -project App.xcodeproj \
             -scheme App \
             -configuration Release \
             -sdk iphonesimulator \
             -destination 'generic/platform=iOS Simulator' \
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
-            build | xcpretty || exit ${PIPESTATUS[0]}
+            build

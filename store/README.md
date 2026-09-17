@@ -88,9 +88,12 @@ Requires macOS and Xcode; the rest of this repo does not.
 npm ci
 npm run verify
 npx cap sync ios
-cd ios/App && pod install
-open App.xcworkspace
+npx cap open ios        # or: open ios/App/App.xcodeproj
 ```
+
+Capacitor 8 manages iOS dependencies with Swift Package Manager, so there is no
+Podfile and no `.xcworkspace` - Xcode resolves the packages in
+`ios/App/CapApp-SPM` on first open.
 
 In Xcode: select the **App** target -> Signing & Capabilities -> pick your team.
 The bundle identifier is already `com.fabshoptycoon.game`. Product -> Archive,

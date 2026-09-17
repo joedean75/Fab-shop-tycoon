@@ -30,10 +30,6 @@ jobs:
         run: npm run check:store
       - run: npx cap sync ios
 
-      - name: Install CocoaPods dependencies
-        working-directory: ios/App
-        run: pod install --repo-update
-
       - name: Import signing certificate and profile
         id: signing
         env:
@@ -63,7 +59,7 @@ jobs:
         if: steps.signing.outputs.signed != 'true'
         working-directory: ios/App
         run: |
-          xcodebuild -workspace App.xcworkspace -scheme App -configuration Release \
+          xcodebuild -project App.xcodeproj -scheme App -configuration Release \
             -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build
 
@@ -73,7 +69,7 @@ jobs:
         env:
           TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
-          xcodebuild -workspace App.xcworkspace -scheme App -configuration Release \
+          xcodebuild -project App.xcodeproj -scheme App -configuration Release \
             -archivePath "${RUNNER_TEMP}/App.xcarchive" \
             DEVELOPMENT_TEAM="$TEAM_ID" archive
           cat > "${RUNNER_TEMP}/ExportOptions.plist" <<PLIST
