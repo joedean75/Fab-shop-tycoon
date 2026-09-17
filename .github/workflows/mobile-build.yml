@@ -2,7 +2,10 @@ name: Mobile build check
 
 on:
   pull_request:
-    paths: ['fab-shop/**', 'android/**', 'ios/**', 'tools/**', 'package.json', 'capacitor.config.json']
+    # Includes the workflows themselves, so a change to CI is checked by the
+    # pull request that makes it rather than after it lands on main.
+    paths: ['fab-shop/**', 'android/**', 'ios/**', 'tools/**', 'package.json',
+            'capacitor.config.json', '.github/workflows/**']
   push:
     branches: [main]
     paths: ['fab-shop/**', 'android/**', 'ios/**', 'tools/**', 'package.json', 'capacitor.config.json']
@@ -51,9 +54,12 @@ jobs:
           if-no-files-found: error
 
   ios:
-    # macOS runners are expensive, so this does not run on every pull request.
+    # macOS runners are expensive, so this normally skips pull requests -
+    # except when the pull request is changing CI itself.
     name: iOS (compile, unsigned)
-    if: github.event_name != 'pull_request'
+    if: >-
+      github.event_name != 'pull_request' ||
+      contains(github.event.pull_request.labels.*.name, 'ci')
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
