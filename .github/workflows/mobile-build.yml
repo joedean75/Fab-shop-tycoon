@@ -15,7 +15,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with: { node-version: '20', cache: 'npm' }
+        with: { node-version: '22', cache: 'npm' }
       - run: npm ci
       - name: Verify the static bundle
         run: npm run verify
@@ -28,10 +28,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with: { node-version: '20', cache: 'npm' }
+        with: { node-version: '22', cache: 'npm' }
       - uses: actions/setup-java@v4
         with: { distribution: 'temurin', java-version: '21' }
       - uses: android-actions/setup-android@v3
+        with:
+          # The action's default package list includes the retired "tools"
+          # package, which makes sdkmanager exit 1.
+          packages: 'platform-tools'
+      - name: Install the SDK this project compiles against
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
       - run: npm ci
       - name: Copy the web build into the native project
         run: npx cap sync android
@@ -52,7 +58,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with: { node-version: '20', cache: 'npm' }
+        with: { node-version: '22', cache: 'npm' }
       - run: npm ci
       - name: Copy the web build into the native project
         run: npx cap sync ios
