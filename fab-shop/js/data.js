@@ -21,7 +21,22 @@
     autoQualityPull: 58,    // unattended machines drift toward merely acceptable
     autoQualityRate: 0.08,
     latePenalty: 0.6,       // pay multiplier on a late delivery
-    boardSize: 4
+    boardSize: 4,
+
+    /* Night shift: the crew keeps working while the app is closed.
+
+       Measured in in-game days, not real hours, because a day here is 50
+       seconds - eight real hours of machine time would be some 300 days of
+       output and would trivialise the game. An hour away buys about a day and
+       a half of operator work, capped at six days, and only where an operator
+       is actually stationed.
+
+       The calendar deliberately does NOT advance either: otherwise a night
+       away would bill hundreds of days of overhead and blow every deadline,
+       punishing absence instead of rewarding it. */
+    offlineWorkPerSecond: 0.02,   // machine-seconds earned per real second away
+    offlineMaxDays: 6,            // ceiling, in in-game days of machine time
+    offlineMinSeconds: 60
   };
 
   // Each station is one process step. Order here is the order jobs travel in.

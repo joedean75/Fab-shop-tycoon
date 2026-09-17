@@ -78,6 +78,14 @@ not loop the reload.
 - **Hire operators** to work a machine unattended. They never sleep, but parts
   they run alone drift toward merely acceptable quality — automation trades
   margin for attention.
+- **The night shift** runs while the app is closed: operators keep working the
+  jobs you left on the floor. It is measured in in-game days, not real hours -
+  an hour away buys about a day and a half of machine time, capped at six days -
+  because a day here is 50 seconds, so eight real hours of output would be some
+  300 days and would trivialise the game. The calendar deliberately does not
+  advance while you are gone, so no overhead is billed and nothing goes late;
+  otherwise being away would punish you rather than reward you. Nothing runs at
+  all without hired operators, which is the point of hiring them.
 - **Each day** (50 real seconds) bills rent, wages and power, then posts fresh
   work. Run out of cash and you take an emergency loan at the cost of
   reputation — the shop never closes.

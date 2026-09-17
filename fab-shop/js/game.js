@@ -10,7 +10,11 @@
 
   FAB.events = [];
 
+  var silent = false;      // set while simulating time the player did not watch
+  var opsAdvanced = 0;     // operations finished during that simulation
+
   function emit(type, payload) {
+    if (silent && (type === 'toast' || type === 'money')) return;
     payload = payload || {};
     payload.type = type;
     FAB.events.push(payload);
@@ -223,6 +227,7 @@
   }
 
   function advanceJob(job) {
+    if (silent) opsAdvanced += 1;
     var st = station(job.at);
     clearSlot(st, job);
     job.at = null;
@@ -402,21 +407,32 @@
         if (st.marker < 0) { st.marker = 0; st.dir = 1; }
       }
 
-      if (st.operators > 0) {
-        var rate = st.operators * def.baseRate * FAB.rateMult(st) * g.operatorMult;
-        var count = FAB.slotCount(st);
-        for (var s = 0; s < count; s++) {
-          var id = st.slots[s];
-          if (!id) continue;
-          var job = jobByUid(id);
-          if (!job) { st.slots[s] = null; continue; }
-          job.progress += rate * dt;
-          job.quality += (g.autoQualityPull - job.quality) * T.autoQualityRate * dt;
-          if (job.progress >= currentOp(job)[1]) advanceJob(job);
-        }
+    }
+
+    runMachines(dt, 1);
+  };
+
+  /* Operator output for one slice of time. rateScale lets the night shift run
+     at reduced efficiency through exactly the same code as live play. */
+  function runMachines(dt, rateScale) {
+    var g = FAB.game;
+    for (var i = 0; i < g.stations.length; i++) {
+      var st = g.stations[i];
+      if (st.operators <= 0) continue;
+      var def = FAB.STATION_BY_KEY[st.key];
+      var rate = st.operators * def.baseRate * FAB.rateMult(st) * g.operatorMult * rateScale;
+      var count = FAB.slotCount(st);
+      for (var s = 0; s < count; s++) {
+        var id = st.slots[s];
+        if (!id) continue;
+        var job = jobByUid(id);
+        if (!job) { st.slots[s] = null; continue; }
+        job.progress += rate * dt;
+        job.quality += (g.autoQualityPull - job.quality) * T.autoQualityRate * dt;
+        if (job.progress >= currentOp(job)[1]) advanceJob(job);
       }
     }
-  };
+  }
 
   /* ---------- purchases ---------- */
 
@@ -474,6 +490,70 @@
     emit('dirty');
     FAB.save();
     return true;
+  };
+
+  /* ---------- the night shift ----------
+     Time the player spent away. Only staffed machines produce - nobody is in
+     the shop otherwise - and the calendar stays put, so no overhead is billed
+     and nothing goes late while they are gone. */
+
+  FAB.runOffline = function (realSeconds) {
+    var g = FAB.game;
+    if (!g || !(realSeconds > 0)) return null;
+
+    if (realSeconds < T.offlineMinSeconds) return null;
+
+    // Convert absence into machine time, bounded in in-game days.
+    var ceiling = T.offlineMaxDays * T.dayLength;
+    var machineSeconds = Math.min(realSeconds * T.offlineWorkPerSecond, ceiling);
+
+    var staffed = g.stations.some(function (st) {
+      return st.operators > 0 && FAB.isStationUnlocked(st.key);
+    });
+    var working = g.jobs.length > 0;
+    if (!staffed || !working) {
+      return {
+        away: realSeconds, days: 0, shipped: 0, earned: 0, levels: 0,
+        idle: true, reason: !staffed ? 'unstaffed' : 'nowork'
+      };
+    }
+
+    var before = { completed: g.stats.completed, earned: g.stats.earned, level: g.level };
+    var step = 1;   // fine enough to route jobs between machines in the right order
+
+    silent = true;
+    opsAdvanced = 0;
+    try {
+      var remaining = machineSeconds;
+      while (remaining > 0) {
+        var dt = remaining < step ? remaining : step;
+        remaining -= dt;
+        routeJobs();
+        runMachines(dt, 1);
+      }
+      routeJobs();
+    } finally {
+      silent = false;
+    }
+
+    var idleFloor = g.jobs.every(function (job) { return !job.at; });
+    var summary = {
+      away: realSeconds,
+      days: machineSeconds / T.dayLength,
+      capped: realSeconds * T.offlineWorkPerSecond > ceiling,
+      ranDry: idleFloor && g.jobs.length > 0,   // crew ran out of staffed work
+      shipped: g.stats.completed - before.completed,
+      earned: g.stats.earned - before.earned,
+      levels: g.level - before.level,
+      ops: opsAdvanced,
+      idle: false
+    };
+    if (!summary.shipped && !summary.ops) {
+      summary.idle = true;
+      summary.reason = 'toosoon';
+    }
+    FAB.save();
+    return summary;
   };
 
   /* ---------- prestige ---------- */
@@ -542,6 +622,7 @@
 
   FAB.save = function () {
     try {
+      FAB.game.lastSeen = Date.now();
       localStorage.setItem(SAVE_KEY, JSON.stringify(FAB.game));
     } catch (err) {
       /* private mode or quota - the game just runs without a save */
@@ -595,6 +676,14 @@
     } catch (err) {
       return false;
     }
+  };
+
+  // Seconds since the last save. Ignores a clock that moved backwards.
+  FAB.secondsAway = function () {
+    var last = FAB.game && FAB.game.lastSeen;
+    if (!last) return 0;
+    var seconds = (Date.now() - last) / 1000;
+    return seconds > 0 ? seconds : 0;
   };
 
   FAB.reset = function () {

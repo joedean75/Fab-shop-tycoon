@@ -38,7 +38,14 @@
     buildStations();
     bindTabs();
 
+    el.nightShift = $('nightshift');
+    el.nightShiftLede = $('nightshift-lede');
+    el.nightShiftLines = $('nightshift-lines');
+
     $('report-ok').addEventListener('click', function () { el.report.classList.add('hidden'); });
+    $('nightshift-ok').addEventListener('click', function () {
+      el.nightShift.classList.add('hidden');
+    });
     $('btn-reset').addEventListener('click', function () {
       if (window.confirm('Scrap the shop and start over?')) {
         FAB.reset();
@@ -406,6 +413,29 @@
     el.toasts.appendChild(node);
     setTimeout(function () { node.remove(); }, 2600);
     while (el.toasts.children.length > 3) el.toasts.firstChild.remove();
+  };
+
+  function describeSpan(seconds) {
+    var h = Math.floor(seconds / 3600);
+    var m = Math.round((seconds % 3600) / 60);
+    if (h && m) return h + 'h ' + m + 'm';
+    if (h) return h + ' hour' + (h === 1 ? '' : 's');
+    return m + ' minute' + (m === 1 ? '' : 's');
+  }
+
+  UI.showNightShift = function (n) {
+    el.nightShiftLede.textContent = 'The shop was shut for ' + describeSpan(n.away) + '. ' +
+      'Your operators put in about ' + n.days.toFixed(1) + ' days on the machines' +
+      (n.capped ? ', which is as long as a crew will run unattended.' : '.');
+    el.nightShiftLines.innerHTML =
+      '<dt>Jobs shipped</dt><dd>' + n.shipped + '</dd>' +
+      '<dt>Operations finished</dt><dd>' + n.ops + '</dd>' +
+      '<dt>Earned</dt><dd class="pos">' + money(n.earned) + '</dd>' +
+      (n.levels ? '<dt>Shop levels gained</dt><dd class="pos">+' + n.levels + '</dd>' : '') +
+      '<dt>Day</dt><dd>' + FAB.game.day + ' (unchanged)</dd>' +
+      (n.ranDry ? '<dt>Note</dt><dd>crew ran out of work</dd>' : '');
+    el.nightShift.classList.remove('hidden');
+    dirty = true;
   };
 
   UI.showReport = function (r) {
