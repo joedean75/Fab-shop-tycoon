@@ -122,8 +122,13 @@ async function render(page, svgPath, width, height, target, opts) {
       out('ios/App/App/Assets.xcassets/Splash.imageset/' + names[k]));
   }
 
-  /* ---- Store listing art ---- */
-  await render(page, iconSvg, 512, 512, out('store/play/icon-512.png'));           // Play listing icon
+  /* ---- Store listing art ----
+     Play specifies the 512 icon as a 32-bit PNG *with* an alpha channel, while
+     Apple rejects an icon that has one. Rendering the Play icon transparently
+     leaves its rounded corners clear, which both satisfies Play and is what it
+     masks for anyway; the Apple icon stays opaque RGB. */
+  await render(page, iconSvg, 512, 512, out('store/play/icon-512.png'),
+    { transparent: true });                                                        // Play listing icon
   await render(page, iconSvg, 1024, 1024, out('store/appstore/icon-1024.png'));    // App Store marketing icon
   await render(page, path.join(SRC, 'feature-graphic.svg'), 1024, 500,
     out('store/play/feature-graphic-1024x500.png'));                               // Play feature graphic
@@ -132,6 +137,21 @@ async function render(page, svgPath, width, height, target, opts) {
   await render(page, iconSvg, 512, 512, out('fab-shop/icon-512.png'));
 
   await browser.close();
+
+  /* The two stores want opposite things from an icon, so check rather than
+     hope: an 8-bit colour-type byte of 6 is RGBA, 2 is RGB. */
+  [
+    { file: 'store/play/icon-512.png', want: 6, label: 'Play icon (needs alpha)' },
+    { file: 'store/appstore/icon-1024.png', want: 2, label: 'App Store icon (must not have alpha)' },
+    { file: 'ios/App/App/Assets.xcassets/AppIcon.appiconset/AppIcon-512@2x.png', want: 2,
+      label: 'iOS app icon (must not have alpha)' }
+  ].forEach(function (check) {
+    var head = fs.readFileSync(path.join(ROOT, check.file)).subarray(0, 26);
+    var colorType = head[25];
+    if (colorType !== check.want) {
+      throw new Error(check.label + ': PNG colour type ' + colorType + ', expected ' + check.want);
+    }
+  });
 
   console.log('make-assets: wrote ' + written.length + ' files');
   written.forEach(function (w) { console.log('  ' + w); });
