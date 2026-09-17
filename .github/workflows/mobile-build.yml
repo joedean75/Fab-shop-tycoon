@@ -8,7 +8,10 @@ on:
             'capacitor.config.json', '.github/workflows/**']
   push:
     branches: [main]
-    paths: ['fab-shop/**', 'android/**', 'ios/**', 'tools/**', 'package.json', 'capacitor.config.json']
+    # Matches the pull_request filter, workflows included: a CI-only merge has
+    # to validate on main too, or a broken workflow lands unnoticed.
+    paths: ['fab-shop/**', 'android/**', 'ios/**', 'tools/**', 'package.json',
+            'capacitor.config.json', '.github/workflows/**']
   workflow_dispatch:
 
 jobs:

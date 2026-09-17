@@ -38,13 +38,21 @@
     buildStations();
     bindTabs();
 
+    el.event = $('event');
+    el.eventTitle = $('event-title');
+    el.eventBody = $('event-body');
+    el.eventChoices = $('event-choices');
     el.nightShift = $('nightshift');
     el.nightShiftLede = $('nightshift-lede');
     el.nightShiftLines = $('nightshift-lines');
 
-    $('report-ok').addEventListener('click', function () { el.report.classList.add('hidden'); });
+    $('report-ok').addEventListener('click', function () {
+      el.report.classList.add('hidden');
+      UI.showEventIfPending();
+    });
     $('nightshift-ok').addEventListener('click', function () {
       el.nightShift.classList.add('hidden');
+      UI.showEventIfPending();
     });
     $('btn-reset').addEventListener('click', function () {
       if (window.confirm('Scrap the shop and start over?')) {
@@ -57,6 +65,7 @@
     el.shopUps.addEventListener('click', onUpgradeClick);
     el.machineUps.addEventListener('click', onUpgradeClick);
     el.perkList.addEventListener('click', onPerkClick);
+    el.eventChoices.addEventListener('click', onEventChoice);
     el.relocatePanel.addEventListener('click', onRelocateClick);
   };
 
@@ -133,8 +142,20 @@
         return;
       }
 
-      ref.meta.textContent = 'Lv ' + st.level + ' · ' +
-        st.operators + ' op' + (st.operators === 1 ? '' : 's');
+      var bays = FAB.slotCount(st);
+      var crew = FAB.effectiveOperators(st);
+      var down = FAB.stationDown(def.key);
+      ref.root.classList.toggle('is-down', down);
+
+      if (down) {
+        var until = FAB.mods('down', def.key)[0];
+        var left = Math.max(1, until.until - FAB.game.day);
+        ref.meta.innerHTML = '<span class="down-tag">DOWN</span> · ' + left + 'd';
+      } else {
+        // An asterisk marks a crew changed by something temporary.
+        ref.meta.textContent = 'Lv ' + st.level + ' · ' + bays + ' bay' + (bays === 1 ? '' : 's') +
+          ' · ' + crew + ' op' + (crew === 1 ? '' : 's') + (crew !== st.operators ? '*' : '');
+      }
 
       var count = FAB.slotCount(st);
       var focusTaken = false;
@@ -438,6 +459,37 @@
     dirty = true;
   };
 
+  /* An event card is only raised once the day's report is out of the way. */
+  UI.showEventIfPending = function () {
+    if (!el.report.classList.contains('hidden')) return;
+    if (!el.nightShift.classList.contains('hidden')) return;
+    var ev = FAB.currentEvent();
+    if (!ev) { el.event.classList.add('hidden'); return; }
+
+    el.eventTitle.textContent = ev.title;
+    el.eventBody.textContent = ev.body;
+    el.eventChoices.innerHTML = ev.choices.map(function (choice, i) {
+      return '<button class="event-choice" data-choice="' + i + '"' +
+          (choice.affordable ? '' : ' disabled') + '>' +
+          '<span class="event-choice-main">' +
+            '<span class="event-choice-label">' + choice.label + '</span>' +
+            (choice.detail ? '<span class="event-choice-detail">' + choice.detail + '</span>' : '') +
+          '</span>' +
+          (choice.cost ? '<span class="event-choice-cost">' + money(choice.cost) + '</span>' : '') +
+        '</button>';
+    }).join('');
+    el.event.classList.remove('hidden');
+  };
+
+  function onEventChoice(ev) {
+    var btn = ev.target.closest('button[data-choice]');
+    if (!btn || btn.disabled) return;
+    if (FAB.resolveEvent(+btn.dataset.choice)) {
+      el.event.classList.add('hidden');
+      UI.markDirty();
+    }
+  }
+
   UI.showReport = function (r) {
     el.reportTitle.textContent = 'Day ' + r.day + ' closed';
     var lines =
@@ -445,6 +497,8 @@
       '<dt>Late</dt><dd class="' + (r.late ? 'neg' : '') + '">' + r.late + '</dd>' +
       '<dt>Revenue</dt><dd class="pos">' + money(r.revenue) + '</dd>' +
       '<dt>Overhead</dt><dd class="neg">-' + money(r.overhead) + '</dd>' +
+      (r.surcharge ? '<dt>&nbsp;&nbsp;of which surcharge</dt><dd class="neg">-' +
+        money(r.surcharge) + '</dd>' : '') +
       '<dt>Net</dt><dd class="' + (r.net >= 0 ? 'pos' : 'neg') + '">' + money(r.net) + '</dd>';
     if (r.bailout) lines += '<dt>Emergency loan</dt><dd class="neg">-5 rep</dd>';
     el.reportLines.innerHTML = lines;
@@ -522,6 +576,7 @@
       else if (ev.type === 'money') UI.flash(el.money, 'flash-good');
       else if (ev.type === 'dayEnd') { UI.showReport(ev.report); dirty = true; }
       else if (ev.type === 'prestige') { dirty = true; }
+      else if (ev.type === 'event') { dirty = true; UI.showEventIfPending(); }
     }
   };
 

@@ -36,7 +36,13 @@
        punishing absence instead of rewarding it. */
     offlineWorkPerSecond: 0.02,   // machine-seconds earned per real second away
     offlineMaxDays: 6,            // ceiling, in in-game days of machine time
-    offlineMinSeconds: 60
+    offlineMinSeconds: 60,
+
+    /* Something turns up at the shop. Fired at day close, never two days
+       running, and never before the player has a shop worth disrupting. */
+    eventChance: 0.38,
+    eventCooldownDays: 2,
+    eventMinDay: 3
   };
 
   // Each station is one process step. Order here is the order jobs travel in.
@@ -233,6 +239,250 @@
       apply: function (g) { g.rep += 8; }
     }
   ];
+
+  /* ---- Things that turn up ----
+     Each event may carry a context (usually a station), a body of text, and
+     up to three choices. A choice may cost money, and is offered greyed out
+     when it cannot be afforded. Effects that last are expressed as modifiers
+     with a lifetime in days, applied by game.js.
+
+     Costs scale with shop level so a callout fee still stings at level 10. */
+
+  function scaled(g, base) {
+    return Math.round(base * (1 + 0.45 * (g.level - 1)) / 5) * 5;
+  }
+
+  FAB.EVENTS = [
+    {
+      key: 'breakdown',
+      title: 'Machine down',
+      weight: 12,
+      when: function (g) { return FAB.runningStations(g).length > 0; },
+      context: function (g) { return { station: FAB.pickStation(g, true) }; },
+      body: function (g, ctx) {
+        return 'The ' + ctx.station.name + ' threw a fault mid-cut and shut itself down. ' +
+               'The service company can be here within the hour, at a price.';
+      },
+      choices: [
+        {
+          label: 'Pay the callout',
+          cost: function (g) { return scaled(g, 380); },
+          detail: function () { return 'back running immediately'; },
+          apply: function () { /* paying is the whole effect */ }
+        },
+        {
+          label: 'Fix it yourself',
+          detail: function () { return 'machine down for 2 days'; },
+          apply: function (g, ctx) { FAB.addModifier(g, 'down', 2, { station: ctx.station.key }); }
+        }
+      ]
+    },
+    {
+      key: 'sick',
+      title: 'Short-handed',
+      weight: 10,
+      when: function (g) { return FAB.staffedStations(g).length > 0; },
+      context: function (g) { return { station: FAB.pickStation(g, false, true) }; },
+      body: function (g, ctx) {
+        return 'One of your hands on the ' + ctx.station.name + ' called in sick. ' +
+               'Nothing to be done about it.';
+      },
+      choices: [
+        {
+          label: 'Cover the shift yourself',
+          detail: function () { return 'one operator down for 2 days'; },
+          apply: function (g, ctx) { FAB.addModifier(g, 'short', 2, { station: ctx.station.key }); }
+        }
+      ]
+    },
+    {
+      key: 'apprentice',
+      title: 'Apprentice turns up',
+      weight: 9,
+      when: function (g) { return g.level >= 3; },
+      context: function (g) { return { station: FAB.pickStation(g) }; },
+      body: function (g, ctx) {
+        return 'A kid from the trade school wants shop hours on the ' + ctx.station.name +
+               '. Keen, unpaid, and only here for the week.';
+      },
+      choices: [
+        {
+          label: 'Put them on the floor',
+          detail: function () { return 'an extra hand for 4 days'; },
+          apply: function (g, ctx) { FAB.addModifier(g, 'helper', 4, { station: ctx.station.key }); }
+        },
+        {
+          label: 'Not this week',
+          detail: function () { return 'no change'; },
+          apply: function () {}
+        }
+      ]
+    },
+    {
+      key: 'steel',
+      title: 'Steel price spike',
+      weight: 10,
+      body: function () {
+        return 'The mill put plate up overnight. Your supplier will hold last month\u2019s ' +
+               'price if you buy a skid now.';
+      },
+      choices: [
+        {
+          label: 'Stock up now',
+          cost: function (g) { return scaled(g, 600); },
+          detail: function () { return 'no surcharge'; },
+          apply: function () {}
+        },
+        {
+          label: 'Ride it out',
+          detail: function () { return 'higher overhead for 3 days'; },
+          apply: function (g) { FAB.addModifier(g, 'surcharge', 3, { amount: scaled(g, 260) }); }
+        }
+      ]
+    },
+    {
+      key: 'walkin',
+      title: 'Walk-in job',
+      weight: 11,
+      body: function (g) {
+        return 'Someone reverses a trailer up to the door with a cracked hitch. ' +
+               'Twenty minutes of welding, cash in hand.';
+      },
+      choices: [
+        {
+          label: 'Take care of it',
+          detail: function (g) { return '+' + FAB.money(scaled(g, 320)) + ' and a little goodwill'; },
+          apply: function (g) { g.money += scaled(g, 320); g.rep = Math.min(100, g.rep + 1); }
+        },
+        {
+          label: 'Too busy',
+          detail: function () { return 'no change'; },
+          apply: function () {}
+        }
+      ]
+    },
+    {
+      key: 'inspector',
+      title: 'Inspector calls',
+      weight: 8,
+      when: function (g) { return g.level >= 4; },
+      body: function (g) {
+        return 'A client\u2019s inspector wants to see the shop and pull a few of your ' +
+               'finished parts at random.';
+      },
+      choices: [
+        {
+          label: 'Show them around',
+          detail: function (g) {
+            return g.rep >= 70 ? 'your work speaks for itself' : 'your recent work is uneven';
+          },
+          apply: function (g) {
+            if (g.rep >= 70) g.rep = Math.min(100, g.rep + 4);
+            else g.rep = Math.max(0, g.rep - 3);
+          }
+        }
+      ]
+    },
+    {
+      key: 'scrap',
+      title: 'Scrap merchant',
+      weight: 10,
+      body: function () {
+        return 'The scrap lorry is in the yard. The offcut bins have been filling up ' +
+               'for weeks.';
+      },
+      choices: [
+        {
+          label: 'Weigh it in',
+          detail: function (g) { return '+' + FAB.money(scaled(g, 210)); },
+          apply: function (g) { g.money += scaled(g, 210); }
+        }
+      ]
+    },
+    {
+      key: 'referral',
+      title: 'Word gets around',
+      weight: 8,
+      when: function (g) { return g.rep >= 55; },
+      body: function () {
+        return 'A customer you did right by has been talking about the shop to ' +
+               'somebody with money to spend.';
+      },
+      choices: [
+        {
+          label: 'Good news',
+          detail: function () { return '+3 reputation'; },
+          apply: function (g) { g.rep = Math.min(100, g.rep + 3); }
+        }
+      ]
+    },
+    {
+      key: 'auction',
+      title: 'Tooling auction',
+      weight: 8,
+      when: function (g) { return g.level >= 5 && FAB.runningStations(g).length > 0; },
+      context: function (g) { return { station: FAB.pickStation(g) }; },
+      body: function (g, ctx) {
+        return 'A shop two towns over is closing down. Their ' + ctx.station.name +
+               ' tooling is going cheap, and it would fit yours.';
+      },
+      choices: [
+        {
+          label: 'Bid on it',
+          cost: function (g) { return scaled(g, 900); },
+          detail: function (ctx) { return 'that machine gains a level'; },
+          apply: function (g, ctx) {
+            var st = FAB.station(ctx.station.key);
+            if (st) {
+              st.level += 1;
+              st.slots.length = FAB.slotCount(st);
+              for (var i = 0; i < st.slots.length; i++) {
+                if (st.slots[i] === undefined) st.slots[i] = null;
+              }
+            }
+          }
+        },
+        {
+          label: 'Let it go',
+          detail: function () { return 'no change'; },
+          apply: function () {}
+        }
+      ]
+    },
+    {
+      key: 'hotjob',
+      title: 'A favour asked',
+      weight: 10,
+      when: function (g) { return FAB.availableProducts(g).length > 0; },
+      context: function (g) {
+        var pool = FAB.availableProducts(g);
+        return { product: pool[Math.floor(Math.random() * pool.length)] };
+      },
+      body: function (g, ctx) {
+        return 'A regular needs a ' + ctx.product.name.toLowerCase() +
+               ' faster than anyone sensible would promise. They will pay for it.';
+      },
+      choices: [
+        {
+          label: 'Say yes',
+          detail: function (g) {
+            return g.jobs.length < g.wipMax
+              ? 'straight onto the floor, tight deadline'
+              : 'floor is full - it goes top of the board';
+          },
+          apply: function (g, ctx) { FAB.addRushJob(g, ctx.product); }
+        },
+        {
+          label: 'Turn it down',
+          detail: function () { return 'no change'; },
+          apply: function () {}
+        }
+      ]
+    }
+  ];
+
+  FAB.EVENT_BY_KEY = {};
+  FAB.EVENTS.forEach(function (e) { FAB.EVENT_BY_KEY[e.key] = e; });
 
   FAB.PERK_BY_KEY = {};
   FAB.PERKS.forEach(function (p) { FAB.PERK_BY_KEY[p.key] = p; });
