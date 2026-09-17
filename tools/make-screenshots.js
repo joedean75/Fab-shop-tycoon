@@ -155,14 +155,25 @@ function serve(port) {
       { name: '2-order-board', prep: async function () { await page.click('.tab[data-view="orders"]'); } },
       { name: '3-upgrades', prep: async function () { await page.click('.tab[data-view="upgrades"]'); } },
       { name: '4-expand', prep: async function () { await page.click('.tab[data-view="expand"]'); } },
-      { name: '5-night-shift', prep: async function () {
+      { name: '5-event', prep: async function () {
+          await page.click('.tab[data-view="floor"]');
+          await page.evaluate(function () {
+            FAB.game.pendingEvent = { key: 'breakdown', stationKey: 'weld', productKey: null };
+            FAB.UI.showEventIfPending();
+          });
+        } },
+      { name: '6-night-shift', prep: async function () {
+          await page.evaluate(function () {
+            document.getElementById('event').classList.add('hidden');
+            FAB.game.pendingEvent = null;
+          });
           await page.click('.tab[data-view="floor"]');
           await page.evaluate(function () {
             FAB.UI.showNightShift({ away: 5 * 3600, days: 6, capped: true, shipped: 4,
                                     ops: 13, earned: 9450, levels: 1, ranDry: false });
           });
         } },
-      { name: '6-day-report', prep: async function () {
+      { name: '7-day-report', prep: async function () {
           await page.click('#nightshift-ok').catch(function () {});
           await page.click('.tab[data-view="floor"]');
           await page.evaluate(function () {

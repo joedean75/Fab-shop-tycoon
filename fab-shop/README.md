@@ -85,6 +85,10 @@ not loop the reload.
   advance while you are gone, so no overhead is billed and nothing goes late;
   otherwise being away would punish you rather than reward you. Nothing runs at
   all without hired operators, which is the point of hiring them.
+- **Something turns up** most days: a machine throws a fault, the steel price
+  jumps, an apprentice appears looking for hours, a regular calls in a favour.
+  Each is a card with a choice, and the choices bite - a machine you decline to
+  repair is genuinely down for two days, and jobs route around it.
 - **Each day** (50 real seconds) bills rent, wages and power, then posts fresh
   work. Run out of cash and you take an emergency loan at the cost of
   reputation — the shop never closes.

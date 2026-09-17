@@ -62,6 +62,9 @@
       board: [],
       upgrades: {},
       ledger: { revenue: 0, jobs: 0, late: 0 },
+      modifiers: [],
+      pendingEvent: null,
+      lastEventDay: 0,
       runEarned: 0,
       // --- meta ---
       blueprints: meta.blueprints || 0,
@@ -97,6 +100,45 @@
   FAB.newGame = function () { return startRun(null); };
   FAB.startRun = startRun;
 
+  FAB.money = function (n) { return '$' + Math.round(n).toLocaleString('en-US'); };
+
+  /* ---------- timed modifiers ----------
+     Events leave effects behind that last a few days: a machine down, a spare
+     pair of hands, a surcharge on the nightly bill. Each carries the day it
+     expires on, and closeDay clears them as the calendar passes. */
+
+  FAB.addModifier = function (g, type, days, extra) {
+    var mod = { type: type, until: g.day + days };
+    if (extra) {
+      Object.keys(extra).forEach(function (k) { mod[k] = extra[k]; });
+    }
+    if (!g.modifiers) g.modifiers = [];
+    g.modifiers.push(mod);
+    return mod;
+  };
+
+  function mods(type, stationKey) {
+    var list = (FAB.game && FAB.game.modifiers) || [];
+    return list.filter(function (m) {
+      return m.type === type && (stationKey === undefined || m.station === stationKey);
+    });
+  }
+  FAB.mods = mods;
+
+  FAB.stationDown = function (key) { return mods('down', key).length > 0; };
+
+  // Operators actually on the machine today: hired, plus lent hands, minus
+  // anyone off sick, and none at all while the machine is down.
+  FAB.effectiveOperators = function (st) {
+    if (FAB.stationDown(st.key)) return 0;
+    var n = st.operators + mods('helper', st.key).length - mods('short', st.key).length;
+    return n > 0 ? n : 0;
+  };
+
+  FAB.surchargeToday = function () {
+    return mods('surcharge').reduce(function (sum, m) { return sum + (m.amount || 0); }, 0);
+  };
+
   /* ---------- lookups ---------- */
 
   function station(key) {
@@ -107,6 +149,33 @@
   FAB.station = station;
 
   FAB.stationDef = function (key) { return FAB.STATION_BY_KEY[key]; };
+
+  FAB.unlockedStations = function (g) {
+    return (g || FAB.game).stations.filter(function (st) { return FAB.isStationUnlocked(st.key); });
+  };
+
+  FAB.runningStations = function (g) {
+    return FAB.unlockedStations(g).filter(function (st) {
+      return st.slots.some(Boolean) && !FAB.stationDown(st.key);
+    });
+  };
+
+  FAB.staffedStations = function (g) {
+    return FAB.unlockedStations(g).filter(function (st) {
+      return st.operators > 0 && !FAB.stationDown(st.key);
+    });
+  };
+
+  // Returns a station definition, preferring busy or staffed machines so an
+  // event lands somewhere the player will feel it.
+  FAB.pickStation = function (g, preferRunning, requireStaffed) {
+    var pool = requireStaffed ? FAB.staffedStations(g)
+      : (preferRunning ? FAB.runningStations(g) : []);
+    if (!pool.length) pool = FAB.unlockedStations(g);
+    if (!pool.length) pool = [g.stations[0]];
+    var st = pool[Math.floor(Math.random() * pool.length)];
+    return FAB.STATION_BY_KEY[st.key];
+  };
 
   FAB.isStationUnlocked = function (key) {
     return FAB.game.level >= FAB.STATION_BY_KEY[key].unlockLevel;
@@ -121,9 +190,10 @@
 
   /* ---------- order board ---------- */
 
-  function availableProducts() {
+  function availableProducts(g) {
+    g = g || FAB.game;
     return FAB.PRODUCTS.filter(function (p) {
-      if (p.level > FAB.game.level) return false;
+      if (p.level > g.level) return false;
       // Never post work the shop physically cannot route yet.
       return p.ops.every(function (op) { return FAB.isStationUnlocked(op[0]); });
     });
@@ -146,6 +216,37 @@
       rush: rush
     };
   }
+
+  FAB.availableProducts = availableProducts;
+
+  /* A favour called in: short deadline, better pay. It goes straight onto the
+     floor when there is room, and onto the board when there is not - so the
+     event still fires for a player running a full floor, which is most of
+     them, without quietly breaking the work-in-progress limit. */
+  FAB.addRushJob = function (g, product) {
+    var pay = Math.round(product.pay * 1.6 * FAB.repMult() * g.payMult / 5) * 5;
+    var due = g.day + Math.max(1, product.days - 1);
+
+    if (g.jobs.length >= g.wipMax) {
+      g.board.unshift({
+        uid: 'o' + (++uid), product: product.key, pay: pay, due: due, rush: true
+      });
+      return null;
+    }
+    var job = {
+      uid: 'j' + (++uid),
+      product: product.key,
+      pay: pay,
+      due: due,
+      rush: true,
+      opIndex: 0,
+      progress: 0,
+      quality: clamp(T.startQuality + g.qualityBonus, 0, 100),
+      at: null
+    };
+    g.jobs.push(job);
+    return job;
+  };
 
   function restockBoard() {
     var size = T.boardSize + (FAB.game.rep >= 70 ? 1 : 0);
@@ -204,7 +305,7 @@
       var job = g.jobs[i];
       if (job.at) continue;
       var st = station(currentOp(job)[0]);
-      if (!st || !FAB.isStationUnlocked(st.key)) continue;
+      if (!st || !FAB.isStationUnlocked(st.key) || FAB.stationDown(st.key)) continue;
       var slot = freeSlotIndex(st);
       if (slot < 0) continue;
       st.slots[slot] = job.uid;
@@ -300,7 +401,7 @@
 
   FAB.tapStation = function (key) {
     var st = station(key);
-    if (!st || st.lock > 0) return null;
+    if (!st || st.lock > 0 || FAB.stationDown(key)) return null;
 
     var job = null;
     for (var i = 0; i < st.slots.length && !job; i++) {
@@ -346,7 +447,8 @@
       power += (st.level - 1) * T.powerPerMachineLevel;
     });
     var rent = T.baseOverhead * (1 + T.overheadGrowth * (g.day - 1)) + (g.wipMax - 3) * 60;
-    var overhead = Math.round(rent + wages + power);
+    var surcharge = FAB.surchargeToday();
+    var overhead = Math.round(rent + wages + power + surcharge);
     g.money -= overhead;
 
     var report = {
@@ -355,6 +457,7 @@
       jobs: g.ledger.jobs,
       late: g.ledger.late,
       overhead: overhead,
+      surcharge: surcharge,
       net: g.ledger.revenue - overhead,
       cash: Math.round(g.money)
     };
@@ -368,7 +471,10 @@
     g.day += 1;
     g.dayTime = 0;
     g.ledger = { revenue: 0, jobs: 0, late: 0 };
+    // Anything whose last day has passed stops applying now.
+    g.modifiers = (g.modifiers || []).filter(function (m) { return m.until > g.day; });
     restockBoard();
+    maybeFireEvent();
 
     if (g.money < 0) {
       // No bankruptcy wipe - an emergency loan keeps the shop open, at a cost.
@@ -381,6 +487,91 @@
     emit('dirty');
     FAB.save();
   }
+
+  /* ---------- things that turn up ---------- */
+
+  function maybeFireEvent() {
+    var g = FAB.game;
+    if (g.pendingEvent) return;                       // one at a time
+    if (g.day < T.eventMinDay) return;
+    if (g.lastEventDay && g.day - g.lastEventDay < T.eventCooldownDays) return;
+    if (Math.random() > T.eventChance) return;
+
+    var pool = FAB.EVENTS.filter(function (def) { return !def.when || def.when(g); });
+    if (!pool.length) return;
+
+    var total = pool.reduce(function (sum, def) { return sum + def.weight; }, 0);
+    var roll = Math.random() * total;
+    var picked = pool[pool.length - 1];
+    for (var i = 0; i < pool.length; i++) {
+      roll -= pool[i].weight;
+      if (roll <= 0) { picked = pool[i]; break; }
+    }
+
+    var ctx = picked.context ? picked.context(g) : {};
+    // Stored by key so a save stays plain data.
+    g.pendingEvent = {
+      key: picked.key,
+      stationKey: ctx.station ? ctx.station.key : null,
+      productKey: ctx.product ? ctx.product.key : null
+    };
+    g.lastEventDay = g.day;
+    emit('event', { key: picked.key });
+    emit('dirty');
+  }
+
+  function eventContext(stored) {
+    return {
+      station: stored.stationKey ? FAB.STATION_BY_KEY[stored.stationKey] : null,
+      product: stored.productKey ? FAB.PRODUCT_BY_KEY[stored.productKey] : null
+    };
+  }
+
+  /* What the UI needs to draw the card: text, and each choice with its cost
+     and whether it can be afforded. */
+  FAB.currentEvent = function () {
+    var g = FAB.game;
+    if (!g || !g.pendingEvent) return null;
+    var def = FAB.EVENT_BY_KEY[g.pendingEvent.key];
+    if (!def) { g.pendingEvent = null; return null; }
+    var ctx = eventContext(g.pendingEvent);
+    return {
+      key: def.key,
+      title: def.title,
+      body: def.body(g, ctx),
+      choices: def.choices.map(function (choice) {
+        var cost = choice.cost ? choice.cost(g, ctx) : 0;
+        return {
+          label: choice.label,
+          detail: choice.detail ? choice.detail(g, ctx) : '',
+          cost: cost,
+          affordable: cost <= g.money
+        };
+      })
+    };
+  };
+
+  FAB.resolveEvent = function (index) {
+    var g = FAB.game;
+    if (!g.pendingEvent) return false;
+    var def = FAB.EVENT_BY_KEY[g.pendingEvent.key];
+    var choice = def && def.choices[index];
+    if (!choice) return false;
+
+    var ctx = eventContext(g.pendingEvent);
+    var cost = choice.cost ? choice.cost(g, ctx) : 0;
+    if (cost > g.money) {
+      emit('toast', { text: 'Not enough cash for that.', tone: 'bad' });
+      return false;
+    }
+    if (cost) g.money -= cost;
+    choice.apply(g, ctx);
+
+    g.pendingEvent = null;
+    emit('dirty');
+    FAB.save();
+    return true;
+  };
 
   /* ---------- main tick ---------- */
 
@@ -418,9 +609,10 @@
     var g = FAB.game;
     for (var i = 0; i < g.stations.length; i++) {
       var st = g.stations[i];
-      if (st.operators <= 0) continue;
+      var crew = FAB.effectiveOperators(st);
+      if (crew <= 0) continue;
       var def = FAB.STATION_BY_KEY[st.key];
-      var rate = st.operators * def.baseRate * FAB.rateMult(st) * g.operatorMult * rateScale;
+      var rate = crew * def.baseRate * FAB.rateMult(st) * g.operatorMult * rateScale;
       var count = FAB.slotCount(st);
       for (var s = 0; s < count; s++) {
         var id = st.slots[s];
@@ -661,6 +853,9 @@
         if (typeof g[k] !== 'number') g[k] = defaults[k];
       });
       if (!g.perks) g.perks = {};
+      if (!Array.isArray(g.modifiers)) g.modifiers = [];
+      if (typeof g.lastEventDay !== 'number') g.lastEventDay = 0;
+      if (g.pendingEvent && !FAB.EVENT_BY_KEY[g.pendingEvent.key]) g.pendingEvent = null;
       if (!g.stats) g.stats = { completed: 0, late: 0, earned: 0, bestDay: 0, bestRun: 0 };
       if (typeof g.stats.bestRun !== 'number') g.stats.bestRun = 0;
       // An old save has earnings but no run total; seed it so the first

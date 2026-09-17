@@ -4,14 +4,16 @@
 
   var last = 0;
   var saveTimer = 0;
-  var report = null;
+  var modals = [];
 
   function frame(now) {
     var dt = last ? Math.min((now - last) / 1000, 0.05) : 0;
     last = now;
 
-    // Reading the nightly report pauses the clock.
-    if (!report.classList.contains('hidden')) dt = 0;
+    // Any card the player is reading pauses the clock.
+    for (var i = 0; i < modals.length; i++) {
+      if (!modals[i].classList.contains('hidden')) { dt = 0; break; }
+    }
 
     if (dt > 0) {
       FAB.tick(dt);
@@ -25,7 +27,9 @@
   }
 
   function start() {
-    report = document.getElementById('report');
+    modals = ['report', 'nightshift', 'event'].map(function (id) {
+      return document.getElementById(id);
+    }).filter(Boolean);
 
     if (!FAB.load()) {
       FAB.newGame();
