@@ -46,8 +46,8 @@ refs.filter(function (ref) {
   if (!exists(clean)) fail('index.html references a missing file: ' + ref);
 });
 
-/* 2. Nothing may be root-absolute: the game has to work under /fab-shop/ on
-      GitHub Pages as well as at a domain root. */
+/* 2. Nothing may be root-absolute: the game has to work when it is served
+      from a subdirectory as well as from a domain root. */
 ['index.html', 'css/style.css', 'js/main.js', 'sw.js', 'manifest.json'].forEach(function (rel) {
   if (!exists(rel)) { fail('required file is missing from the bundle: ' + rel); return; }
   var body = read(rel);
@@ -99,7 +99,7 @@ files.filter(function (f) { return /\.js$/.test(f); }).forEach(function (f) {
 
 /* 6. Flag anything shipped but never referenced. */
 var referenced = refs.map(function (r) { return r.replace(/^\.\//, '').split('?')[0]; })
-  .concat(['index.html', 'sw.js', 'README.md', '.nojekyll']);
+  .concat(['index.html', 'sw.js', 'README.md']);
 files.forEach(function (f) {
   if (referenced.indexOf(f) === -1 && shell.indexOf(f) === -1) note('unreferenced file in bundle: ' + f);
 });
