@@ -63,7 +63,7 @@
     <div id="upgrade-machines" class="upgrade-list"></div>
     <div class="danger-zone">
       <button id="btn-reset" class="btn btn-ghost" type="button">Reset shop</button>
-      <p class="legal"><a href="privacy.html">Privacy policy</a> &middot; <span id="app-version">v1.1.0</span></p>
+      <p class="legal"><a href="privacy.html">Privacy policy</a> &middot; <span id="app-version">v1.2.0</span></p>
     </div>
   </section>
 
@@ -88,6 +88,15 @@
 </nav>
 
 <div id="toasts" class="toasts" aria-live="polite"></div>
+
+<div id="nightshift" class="report hidden" role="dialog" aria-modal="true" aria-labelledby="nightshift-title">
+  <div class="report-card">
+    <h2 id="nightshift-title">While you were out</h2>
+    <p id="nightshift-lede" class="relocate-note"></p>
+    <dl id="nightshift-lines" class="report-lines"></dl>
+    <button id="nightshift-ok" class="btn btn-primary" type="button">Back to work</button>
+  </div>
+</div>
 
 <div id="report" class="report hidden" role="dialog" aria-modal="true" aria-labelledby="report-title">
   <div class="report-card">

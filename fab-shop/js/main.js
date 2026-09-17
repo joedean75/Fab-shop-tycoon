@@ -32,8 +32,19 @@
       FAB.UI.init();
       FAB.UI.toast('Welcome to the shop. Take an order, then tap the machines.', 'good');
     } else {
+      // Run the night shift before the first frame, so the player sees the
+      // shop as it actually stands rather than watching it catch up.
+      var away = FAB.secondsAway();
+      var nightShift = FAB.runOffline(away);
       FAB.UI.init();
-      FAB.UI.toast('Shop reopened - day ' + FAB.game.day + '.');
+      if (nightShift && !nightShift.idle) {
+        FAB.UI.showNightShift(nightShift);
+      } else {
+        FAB.UI.toast('Shop reopened - day ' + FAB.game.day + '.');
+        if (nightShift && nightShift.reason === 'unstaffed' && away > 600) {
+          FAB.UI.toast('Nothing ran while you were out - hire an operator.', 'bad');
+        }
+      }
     }
 
     FAB.UI.markDirty();

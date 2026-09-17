@@ -2,7 +2,7 @@
    HTML is network-first so a redeploy reaches players on their next load;
    static assets are stale-while-revalidate so the game starts instantly and
    picks up new files in the background. Bump VERSION on every release. */
-var VERSION = 'v1.1.0';
+var VERSION = 'v1.2.0';
 var CACHE = 'fabshop-' + VERSION;
 var SHELL = [
   './',

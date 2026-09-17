@@ -21,7 +21,8 @@ tools/               verification and asset generation scripts
   backgrounds instead of quitting mid-day.
 - Every icon, splash and store image generated from `assets/src` (`npm run assets`).
 - Store screenshots at the exact sizes both stores accept (`npm run shots`).
-- Listing copy, data safety, content rating, privacy policy and review notes.
+- Listing copy, data safety, content rating, privacy policy and review notes,
+  with corvuscompanies6@gmail.com as the published support contact.
 - Release signing wired into Gradle, and CI workflows for both stores.
 - The Android release bundle (`app-release.aab`) has been built and verified.
 
@@ -31,7 +32,6 @@ These need accounts, money, or a Mac, and cannot be automated from here.
 
 | Step | Where | Notes |
 | --- | --- | --- |
-| Set the support email | `fab-shop/privacy.html` | Replace `PLACEHOLDER_CONTACT_EMAIL`. `npm run check:store` fails until you do. |
 | Google Play developer account | play.google.com/console | One-time 25 USD. |
 | Apple Developer Program | developer.apple.com | 99 USD per year. Required even for a free app. |
 | Create the upload keystore | local machine | See below. Losing it means you can never update the app. |
