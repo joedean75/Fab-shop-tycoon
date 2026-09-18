@@ -62,6 +62,7 @@
       board: [],
       upgrades: {},
       ledger: { revenue: 0, jobs: 0, late: 0 },
+      autoRoute: true,
       modifiers: [],
       pendingEvent: null,
       lastEventDay: 0,
@@ -249,7 +250,7 @@
   };
 
   function restockBoard() {
-    var size = T.boardSize + (FAB.game.rep >= 70 ? 1 : 0);
+    var size = T.boardSize + (FAB.game.rep >= T.repBoardBonusAt ? 1 : 0);
     FAB.game.board = [];
     for (var i = 0; i < size; i++) FAB.game.board.push(makeOffer());
   }
@@ -301,18 +302,74 @@
   // Pull racked jobs onto any machine that has room for them.
   function routeJobs() {
     var g = FAB.game;
+    if (g.autoRoute === false) return;     // the player is loading machines themselves
     for (var i = 0; i < g.jobs.length; i++) {
-      var job = g.jobs[i];
-      if (job.at) continue;
-      var st = station(currentOp(job)[0]);
-      if (!st || !FAB.isStationUnlocked(st.key) || FAB.stationDown(st.key)) continue;
-      var slot = freeSlotIndex(st);
-      if (slot < 0) continue;
-      st.slots[slot] = job.uid;
-      job.at = st.key;
-      job.progress = 0;
+      if (!g.jobs[i].at) placeJob(g.jobs[i]);
     }
   }
+
+  /* Put a job on the machine its current operation needs. Progress is NOT
+     reset here - advanceJob already zeroes it when an operation finishes, and
+     resetting on load would throw away work every time a job is pulled off a
+     machine and put back. */
+  function placeJob(job) {
+    var st = station(currentOp(job)[0]);
+    if (!st || !FAB.isStationUnlocked(st.key) || FAB.stationDown(st.key)) return false;
+    var slot = freeSlotIndex(st);
+    if (slot < 0) return false;
+    st.slots[slot] = job.uid;
+    job.at = st.key;
+    return true;
+  }
+
+  /* Why a job cannot go on right now, for the button that offers it. */
+  FAB.loadBlockedReason = function (job) {
+    var def = FAB.STATION_BY_KEY[currentOp(job)[0]];
+    var st = station(def.key);
+    if (!FAB.isStationUnlocked(def.key)) return def.name + ' not unlocked';
+    if (FAB.stationDown(def.key)) return def.name + ' is down';
+    if (freeSlotIndex(st) < 0) return def.name + ' has no free bay';
+    return null;
+  };
+
+  FAB.loadJob = function (uid) {
+    var job = jobByUid(uid);
+    if (!job || job.at) return false;
+    if (!placeJob(job)) {
+      emit('toast', { text: FAB.loadBlockedReason(job) + '.', tone: 'bad' });
+      return false;
+    }
+    emit('dirty');
+    FAB.save();
+    return true;
+  };
+
+  /* Pull a job back off a machine, keeping the work already done on it, so a
+     more urgent job can take the bay. */
+  FAB.unloadJob = function (uid) {
+    var job = jobByUid(uid);
+    if (!job || !job.at) return false;
+    var st = station(job.at);
+    if (st) {
+      for (var i = 0; i < st.slots.length; i++) {
+        if (st.slots[i] === uid) st.slots[i] = null;
+      }
+    }
+    job.at = null;
+    emit('dirty');
+    FAB.save();
+    return true;
+  };
+
+  FAB.setAutoRoute = function (on) {
+    FAB.game.autoRoute = !!on;
+    if (on) routeJobs();
+    emit('toast', {
+      text: on ? 'Machines load themselves again.' : 'You are loading the machines now.'
+    });
+    emit('dirty');
+    FAB.save();
+  };
 
   function jobByUid(id) {
     var list = FAB.game.jobs;
@@ -359,13 +416,13 @@
     if (late) {
       g.ledger.late += 1;
       g.stats.late += 1;
-      g.rep = clamp(g.rep - 5, 0, 100);
-    } else if (job.quality >= 88) {
-      g.rep = clamp(g.rep + 1, 0, 100);
-    } else if (job.quality >= 74) {
-      g.rep = clamp(g.rep + 0.5, 0, 100);
-    } else if (job.quality < 50) {
-      g.rep = clamp(g.rep - 2, 0, 100);
+      g.rep = clamp(g.rep + T.repLate, 0, 100);
+    } else if (job.quality >= T.repGreatAt) {
+      g.rep = clamp(g.rep + T.repGreat, 0, 100);
+    } else if (job.quality >= T.repGoodAt) {
+      g.rep = clamp(g.rep + T.repGood, 0, 100);
+    } else if (job.quality < T.repPoorAt) {
+      g.rep = clamp(g.rep + T.repPoor, 0, 100);
     }
 
     addXp(Math.round(product.xp * (job.quality >= 88 ? 1.25 : 1)));
@@ -465,7 +522,7 @@
 
     // Racked work that blew its deadline still costs you standing.
     g.jobs.forEach(function (job) {
-      if (g.day > job.due) g.rep = clamp(g.rep - 1, 0, 100);
+      if (g.day > job.due) g.rep = clamp(g.rep + T.repRackOverdue, 0, 100);
     });
 
     g.day += 1;
@@ -479,7 +536,7 @@
     if (g.money < 0) {
       // No bankruptcy wipe - an emergency loan keeps the shop open, at a cost.
       g.money = 250;
-      g.rep = clamp(g.rep - 5, 0, 100);
+      g.rep = clamp(g.rep + T.repBailout, 0, 100);
       report.bailout = true;
     }
 
@@ -854,6 +911,7 @@
       });
       if (!g.perks) g.perks = {};
       if (!Array.isArray(g.modifiers)) g.modifiers = [];
+      if (typeof g.autoRoute !== 'boolean') g.autoRoute = true;
       if (typeof g.lastEventDay !== 'number') g.lastEventDay = 0;
       if (g.pendingEvent && !FAB.EVENT_BY_KEY[g.pendingEvent.key]) g.pendingEvent = null;
       if (!g.stats) g.stats = { completed: 0, late: 0, earned: 0, bestDay: 0, bestRun: 0 };

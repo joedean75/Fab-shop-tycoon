@@ -20,6 +20,9 @@
     el.xpFill = $('xpbar-fill');
     el.stations = $('stations');
     el.rackList = $('rack-list');
+    el.autoRoute = $('autoroute');
+    el.manual = $('manual');
+    el.manualBody = $('manual-body');
     el.rackCount = $('rack-count');
     el.boardList = $('board-list');
     el.shopUps = $('upgrade-shop');
@@ -46,6 +49,10 @@
     el.nightShiftLede = $('nightshift-lede');
     el.nightShiftLines = $('nightshift-lines');
 
+    $('btn-manual').addEventListener('click', UI.showManual);
+    $('manual-ok').addEventListener('click', function () {
+      el.manual.classList.add('hidden');
+    });
     $('report-ok').addEventListener('click', function () {
       el.report.classList.add('hidden');
       UI.showEventIfPending();
@@ -62,6 +69,17 @@
     });
 
     el.boardList.addEventListener('click', onBoardClick);
+    el.rackList.addEventListener('click', onRackClick);
+    // The eject button sits on the machine card, so keep its tap from also
+    // scoring a hit on the machine underneath it.
+    el.stations.addEventListener('pointerdown', function (ev) {
+      if (ev.target.closest('button[data-unload]')) ev.stopPropagation();
+    }, true);
+    el.stations.addEventListener('click', onUnloadClick);
+    el.autoRoute.addEventListener('change', function (ev) {
+      FAB.setAutoRoute(ev.target.checked);
+      UI.markDirty();
+    });
     el.shopUps.addEventListener('click', onUpgradeClick);
     el.machineUps.addEventListener('click', onUpgradeClick);
     el.perkList.addEventListener('click', onPerkClick);
@@ -179,6 +197,8 @@
             (focused ? '' : '<span class="job-tag">auto</span>') +
             '<span class="job-q"></span>' +
             '<span class="job-due"></span>' +
+            '<button class="unload" data-unload="' + job.uid + '" ' +
+              'title="Send back to the rack">⏏</button>' +
           '</div>' +
           '<div class="prog"><div class="prog-fill"></div></div>';
 
@@ -224,6 +244,7 @@
   function renderRack() {
     var g = FAB.game;
     el.rackCount.textContent = g.jobs.length + '/' + g.wipMax;
+    el.autoRoute.checked = g.autoRoute !== false;
     var racked = g.jobs.filter(function (j) { return !j.at; });
     if (!racked.length) {
       el.rackList.innerHTML = '<div class="empty">Nothing waiting. Grab work from the order board.</div>';
@@ -232,14 +253,18 @@
     el.rackList.innerHTML = racked.map(function (job) {
       var next = FAB.STATION_BY_KEY[FAB.currentOp(job)[0]];
       var left = job.due - g.day;
+      var blocked = FAB.loadBlockedReason(job);
       return '<div class="card">' +
         '<div class="card-body">' +
           '<div class="card-title">' + FAB.jobProduct(job).name + '</div>' +
           '<div class="card-sub">Waiting for ' + next.name + ' · ' +
             (left < 0 ? 'OVERDUE' : 'due day ' + job.due) + '</div>' +
           routeMarkup(job) +
+          '<div class="card-pay">' + money(job.pay) + '</div>' +
         '</div>' +
-        '<div class="card-pay">' + money(job.pay) + '</div>' +
+        '<button class="btn btn-small" data-load="' + job.uid + '"' +
+          (blocked ? ' disabled title="' + blocked + '"' : '') + '>' +
+          (blocked ? 'Busy' : 'Load') + '</button>' +
       '</div>';
     }).join('');
   }
@@ -408,6 +433,21 @@
     }
   }
 
+  function onRackClick(ev) {
+    var btn = ev.target.closest('button[data-load]');
+    if (!btn || btn.disabled) return;
+    FAB.loadJob(btn.dataset.load);
+    UI.markDirty();
+  }
+
+  function onUnloadClick(ev) {
+    var btn = ev.target.closest('button[data-unload]');
+    if (!btn) return;
+    ev.stopPropagation();
+    FAB.unloadJob(btn.dataset.unload);
+    UI.markDirty();
+  }
+
   function onBoardClick(ev) {
     var btn = ev.target.closest('button[data-accept]');
     if (!btn) return;
@@ -489,6 +529,77 @@
       UI.markDirty();
     }
   }
+
+  /* The manual is built from the tuning constants, so it always states what
+     the simulation actually does rather than a description that drifts. */
+  UI.showManual = function () {
+    var T = FAB.TUNE;
+    var signed = function (n) { return (n > 0 ? '+' : '') + n; };
+    var row = function (label, value, dir) {
+      return '<tr><td>' + label + '</td><td class="' + dir + '">' + value + '</td></tr>';
+    };
+
+    el.manualBody.innerHTML =
+      '<h3>Working a machine</h3>' +
+      '<p>Tap a running machine as the orange marker crosses the green band. ' +
+      'Timing is the whole game: a perfect hit does ' +
+      (T.perfectWork / T.tapWork).toFixed(0) + ' times the work of a mistimed one.</p>' +
+      '<table>' +
+        row('Perfect hit, inside the band', T.perfectWork + ' work, ' +
+            signed(T.perfectQuality) + ' quality', 'up') +
+        row('Close to the band', T.goodWork + ' work', '') +
+        row('Mistimed', T.tapWork + ' work, ' + signed(T.missQuality) + ' quality', 'down') +
+      '</table>' +
+
+      '<h3>Quality</h3>' +
+      '<p>Every part carries a quality score. It starts at ' + T.startQuality +
+      ', rises with well-timed taps, and sets what the job pays - from 0.8x at ' +
+      'the bottom to 1.25x at the top. A machine left to an operator drifts ' +
+      'toward ' + T.autoQualityPull + ', which is why hand-worked parts pay more.</p>' +
+
+      '<h3>Reputation</h3>' +
+      '<p>Reputation sets what the board pays you, from 0.85x at nothing to ' +
+      '1.15x at 100. At ' + T.repBoardBonusAt + ' you get an extra offer every day. ' +
+      'The losses are bigger than the gains, so protect it.</p>' +
+      '<table>' +
+        row('Ship at quality ' + T.repGreatAt + '+', signed(T.repGreat), 'up') +
+        row('Ship at quality ' + T.repGoodAt + '-' + (T.repGreatAt - 1), signed(T.repGood), 'up') +
+        row('Ship at quality under ' + T.repPoorAt, signed(T.repPoor), 'down') +
+        row('Ship after the deadline', signed(T.repLate), 'down') +
+        row('Each overdue job left on the rack, per day', signed(T.repRackOverdue), 'down') +
+        row('Emergency loan when cash runs out', signed(T.repBailout), 'down') +
+      '</table>' +
+      '<p>Events move it too: a good word adds 3, a walk-in job 1, and the ' +
+      'inspector adds 4 if you are already respected - or takes 3 if you are not.</p>' +
+
+      '<h3>Loading the machines</h3>' +
+      '<p>Jobs load themselves onto the machine they need next. Turn off ' +
+      '<b>Auto-load</b> above the steel rack to do it yourself: then <b>Load</b> ' +
+      'puts a racked job on, and the eject button on a running job sends it back ' +
+      'to the rack with its progress intact, so you can free a bay for something ' +
+      'more urgent.</p>' +
+
+      '<h3>The day</h3>' +
+      '<p>A day lasts ' + T.dayLength + ' seconds and ends with rent, wages and ' +
+      'power coming out whether you shipped or not. Deadlines are counted in days, ' +
+      'and a late delivery pays only ' + Math.round(T.latePenalty * 100) + '% of ' +
+      'its ticket on top of the reputation hit.</p>' +
+
+      '<h3>While you are away</h3>' +
+      '<p>Hired operators keep working the jobs on the floor when the app is ' +
+      'closed - about a day and a half of machine time per hour away, up to ' +
+      T.offlineMaxDays + ' days. The calendar waits for you, so nothing goes late ' +
+      'while you are gone, and nothing runs at all without operators.</p>' +
+
+      '<h3>Selling up</h3>' +
+      '<p>From shop level ' + FAB.PRESTIGE.minLevel + ' you can sell the shop and ' +
+      'open a bigger one. You bank blueprints for what it earned, and they buy ' +
+      'permanent upgrades that carry into every shop afterwards. Each blueprint ' +
+      'ever earned also adds ' + Math.round(FAB.PRESTIGE.passivePayPerBlueprint * 100) +
+      '% to pay, so spending them never sets you back.</p>';
+
+    el.manual.classList.remove('hidden');
+  };
 
   UI.showReport = function (r) {
     el.reportTitle.textContent = 'Day ' + r.day + ' closed';

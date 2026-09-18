@@ -21,6 +21,17 @@
     autoQualityPull: 58,    // unattended machines drift toward merely acceptable
     autoQualityRate: 0.08,
     latePenalty: 0.6,       // pay multiplier on a late delivery
+
+    /* Reputation. Named here so the in-game manual quotes the same numbers
+       the simulation applies, instead of a copy that drifts. */
+    repLate: -5,            // shipped after the deadline
+    repGreatAt: 88, repGreat: 1,
+    repGoodAt: 74, repGood: 0.5,
+    repPoorAt: 50, repPoor: -2,
+    repRackOverdue: -1,     // per overdue job left on the rack, per day
+    repBailout: -5,         // taking the emergency loan
+    repBoardBonusAt: 70,    // an extra offer on the board from here up
+
     boardSize: 4,
 
     /* Night shift: the crew keeps working while the app is closed.

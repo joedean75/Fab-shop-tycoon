@@ -1,6 +1,6 @@
 {
   "name": "fab-shop-tycoon",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "private": true,
   "description": "Fab Shop Tycoon - run a metal fabrication shop. Web, iOS and Android from one source.",
   "scripts": {

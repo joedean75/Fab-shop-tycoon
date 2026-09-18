@@ -36,12 +36,16 @@
 
   <section id="view-floor" class="view is-active">
     <div class="view-head">
-      <h2>Shop Floor</h2>
+      <h2>Shop Floor<button id="btn-manual" class="help-btn" type="button"
+        aria-label="How the shop works">?</button></h2>
       <p class="hint">Tap a running machine when the marker hits the green band.</p>
     </div>
     <div id="stations" class="stations"></div>
     <div class="rack">
-      <h3>Steel Rack <span id="rack-count" class="pill">0/3</span></h3>
+      <h3>Steel Rack <span id="rack-count" class="pill">0/3</span>
+        <label class="switch"><input id="autoroute" type="checkbox" checked>
+          <span>Auto-load</span></label>
+      </h3>
       <div id="rack-list" class="rack-list"></div>
     </div>
   </section>
@@ -63,7 +67,7 @@
     <div id="upgrade-machines" class="upgrade-list"></div>
     <div class="danger-zone">
       <button id="btn-reset" class="btn btn-ghost" type="button">Reset shop</button>
-      <p class="legal"><a href="privacy.html">Privacy policy</a> &middot; <span id="app-version">v1.3.0</span></p>
+      <p class="legal"><a href="privacy.html">Privacy policy</a> &middot; <span id="app-version">v1.4.0</span></p>
     </div>
   </section>
 
@@ -88,6 +92,14 @@
 </nav>
 
 <div id="toasts" class="toasts" aria-live="polite"></div>
+
+<div id="manual" class="report hidden" role="dialog" aria-modal="true" aria-labelledby="manual-title">
+  <div class="report-card manual-card">
+    <h2 id="manual-title">How the shop works</h2>
+    <div id="manual-body" class="manual-body"></div>
+    <button id="manual-ok" class="btn btn-primary" type="button">Got it</button>
+  </div>
+</div>
 
 <div id="event" class="report hidden" role="dialog" aria-modal="true" aria-labelledby="event-title">
   <div class="report-card">

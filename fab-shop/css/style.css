@@ -341,6 +341,55 @@ h3 { font-size: 14px; color: var(--muted); text-transform: uppercase; }
 .report-lines dd.pos { color: var(--good); }
 .report-lines dd.neg { color: var(--bad); }
 
+/* ---------- Manual, toggles and job controls ---------- */
+
+.help-btn {
+  margin-left: 8px;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: var(--panel-2);
+  color: var(--muted);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  vertical-align: middle;
+}
+
+.help-btn:active { background: var(--orange); color: #1a1207; }
+
+.switch { float: right; display: flex; align-items: center; gap: 6px; font-size: 11px; cursor: pointer; }
+.switch input { width: 34px; height: 20px; accent-color: var(--orange); }
+
+.unload {
+  margin-left: 6px;
+  min-width: 34px;
+  min-height: 30px;
+  padding: 0 6px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--panel-2);
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.unload:active { background: var(--bad); color: #fff; }
+
+.manual-card { max-height: 78vh; overflow-y: auto; }
+.manual-body h3 { margin: 18px 0 6px; color: var(--orange); font-size: 13px; }
+.manual-body p { margin: 0 0 8px; font-size: 13px; line-height: 1.5; color: var(--text); }
+.manual-body table { width: 100%; border-collapse: collapse; font-size: 13px; margin: 4px 0 8px; }
+.manual-body td { padding: 4px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+.manual-body td:last-child { text-align: right; white-space: nowrap; padding-left: 10px; font-variant-numeric: tabular-nums; }
+.manual-body .up { color: var(--good); font-weight: 700; }
+.manual-body .down { color: var(--bad); font-weight: 700; }
+
 /* ---------- Events ---------- */
 
 .event-tag {
