@@ -1,8 +1,8 @@
 FAB SHOP TYCOON - GOOGLE PLAY STORE LISTING
 ==============================================================================
 Package name : com.fabshoptycoon.game
-Version      : 1.3.0 (versionCode 10300)
-Generated    : 2026-09-17
+Version      : 1.4.0 (versionCode 10400)
+Generated    : 2026-09-18  (node tools/make-listing-sheet.js)
 
 Everything below is ready to paste into Play Console. Character counts are
 shown against Google's limits - all are within range.
@@ -52,23 +52,26 @@ GRAPHICS  ->  same page, scroll down
 ------------------------------------------------------------------------------
 
 App icon          512 x 512 PNG     store/play/icon-512.png
+                  32-bit with alpha - Play requires the alpha channel
 Feature graphic   1024 x 500 PNG    store/play/feature-graphic-1024x500.png
 Phone screenshots 1080 x 1920 PNG   store/play/screenshots/phone/          (7 files)
 7-inch tablet     1200 x 1920 PNG   store/play/screenshots/tablet-7/       (7 files)
 10-inch tablet    1600 x 2560 PNG   store/play/screenshots/tablet-10/      (7 files)
 
-Play requires at least 2 phone screenshots; 7 are provided. Tablet sets are
-optional but they unlock the tablet listing and look better on large screens.
+Play requires at least 2 phone screenshots and allows up to 8. Tablet sets
+are optional but they unlock the tablet listing.
 
 ------------------------------------------------------------------------------
-RELEASE NOTES  ->  Testing > Internal testing > Create new release
+RELEASE NOTES  ->  Test and release > (track) > Create new release
 ------------------------------------------------------------------------------
 
-WHAT'S NEW  (282 / 500 characters)
+WHAT'S NEW  (341 / 500 characters)
 ----------------------------------------
-Something turns up at the shop most days now.
+Take the controls.
 
-A machine throws a fault, the steel price jumps, an apprentice wants hours, a regular calls in a favour. Ten kinds of event, each a decision with real consequences - decline the repair bill and that machine really is down for two days.
+Turn off auto-load and put jobs on the machines yourself - eject a running job and it goes back to the rack with its progress intact, so an urgent order can take the bay.
+
+New in-game manual behind the ? on the shop floor: exactly what earns and costs reputation, how quality sets your pay, and what the night shift does.
 
 ------------------------------------------------------------------------------
 STORE SETTINGS  ->  Grow > Store presence > Store settings
@@ -76,52 +79,30 @@ STORE SETTINGS  ->  Grow > Store presence > Store settings
 
 App category      Game
 Category          Simulation
-Tags              choose up to 5, suggested: Simulation, Casual, Idle,
-                  Management, Tycoon
+Tags              up to 5, suggested: Simulation, Casual, Idle, Management,
+                  Tycoon
 Email address     corvuscompanies6@gmail.com
 Website           https://fab-shop-tycoon.onrender.com
-Phone             leave blank (optional)
 External privacy  https://fab-shop-tycoon.onrender.com/privacy.html
-policy URL
 
 ------------------------------------------------------------------------------
 APP CONTENT  ->  Policy > App content   (each is its own form)
 ------------------------------------------------------------------------------
 
 Privacy policy          https://fab-shop-tycoon.onrender.com/privacy.html
-
-App access              All functionality is available without special access.
-                        No login, no restricted areas.
-
+App access              All functionality available without special access.
 Ads                     No, my app does not contain ads.
-
-Content rating          Start questionnaire. Category: Game.
-                        Answer No to every content question - no violence,
-                        no sexuality, no profanity, no controlled substances,
-                        no gambling, no horror, no user interaction, no
-                        location sharing, no digital purchases.
-                        Expected result: ESRB Everyone / PEGI 3 / USK 0.
+Content rating          Category: Game. Answer No to every content question.
+                        Expected: ESRB Everyone / PEGI 3 / USK 0.
                         Full answers: store/play/content-rating.md
-
-Target audience         Age groups: 13+ recommended (the game suits all ages,
-                        but declaring under-13 pulls you into Families policy
-                        and extra requirements you do not need).
-                        Appeal to children: No.
-
-Data safety             Does your app collect or share any required user data
-                        types?  NO.
-                        Nothing is collected, nothing is shared, no third-party
-                        SDKs. Save data stays in the device's local storage and
-                        never leaves it, which Play does not count as collection.
+Target audience         13+ recommended. Declaring under-13 pulls the app
+                        into Families policy and its extra requirements.
+Data safety             No data collected, none shared, no third-party SDKs.
+                        Save data stays in local storage on the device.
                         Full answers: store/play/data-safety.md
-
-Government apps         No.
-Financial features      None of these.
-Health apps             No.
-News apps               No.
-COVID-19 apps           No.
-Data deletion           Not applicable - no account, no collected data. The
-                        in-game Reset shop button clears local progress.
+Government apps         No.      Financial features  None of these.
+Health apps             No.      News apps           No.
+Data deletion           Not applicable - no account, no collected data.
 
 ------------------------------------------------------------------------------
 PRICING  ->  Monetise > Pricing
@@ -133,11 +114,9 @@ Free. No in-app purchases, no subscriptions, no ads.
 NOTES
 ------------------------------------------------------------------------------
 
-- Upload the signed bundle to Internal testing first, not Production.
-  Internal testing has no review wait and gets the app onto a device in
-  minutes, which is the only way to confirm the native shell behaves.
-- Never upload the .jks keystore anywhere. It signs the bundle on your
-  machine and stays there.
-- If your developer account is a personal one opened after late 2023, Play
-  may require a closed test with about 12 testers for 14 continuous days
-  before Production unlocks. Check the dashboard - it sets your timeline.
+- Upload to a test track before Production: no review wait, and it is the
+  only way to confirm the native shell behaves on a real device.
+- Never upload the .jks keystore anywhere. It signs the bundle and stays
+  on your machine.
+- A personal developer account opened after late 2023 may need a closed test
+  with about 12 testers for 14 continuous days before Production unlocks.
