@@ -8,6 +8,7 @@ var SHELL = [
   './',
   './index.html',
   './privacy.html',
+  './support.html',
   './css/style.css',
   './js/data.js',
   './js/game.js',
