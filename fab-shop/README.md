@@ -66,7 +66,13 @@ not loop the reload.
 
 - **Take orders** from the board. Rush jobs pay ~45% more on a tighter deadline.
   Your Steel Rack limits how many jobs can be on the floor at once.
-- **Jobs route themselves** to the next machine they need as bays free up. Seven
+- **Jobs route themselves** to the next machine they need as bays free up, or
+  turn off **Auto-load** and do it yourself: `Load` puts a racked job on a
+  machine, and ejecting a running job returns it to the rack with its progress
+  intact, so an urgent job can take the bay.
+- **A `?` on the shop floor** opens the manual, which is generated from
+  `FAB.TUNE` - it quotes the numbers the simulation actually applies rather
+  than a description that drifts out of date. Seven
   stations unlock as the shop levels: plasma table, press brake, MIG bay, grind
   and paint, then the tube laser, CNC mill and powder coat line.
 - **Tap a running machine** when the orange marker crosses the green band. A

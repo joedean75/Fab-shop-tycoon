@@ -7,7 +7,12 @@
     startRep: 50,
     dayLength: 50,          // real seconds per in-game day
     baseOverhead: 180,      // rent + consumables, billed nightly
-    overheadGrowth: 0.06,   // the landlord does not stay still
+    /* Overhead follows the shop, not the calendar. Growing it per day punished
+       exactly the players who were already struggling: rent reached 5.7x by day
+       80 whether or not the shop had grown, so a slow player was bankrupted by
+       rent alone, took the emergency loan, lost reputation, earned less, and
+       never recovered. A bigger shop costs more to run; a slow one does not. */
+    overheadPerLevel: 0.1,
     wagePerOperator: 110,
     powerPerMachineLevel: 45,
     tapWork: 4,             // work units for a mistimed tap
@@ -15,12 +20,30 @@
     perfectWork: 16,
     tapLock: 0.09,          // seconds between scored taps on one machine
     zoneWidth: 0.17,        // width of the green band, 0..1
-    startQuality: 55,
+    startQuality: 58,
     perfectQuality: 1.6,
-    missQuality: -1.2,
+    /* A mistimed tap wastes itself; it no longer spoils the part as well.
+       Punishing a miss twice meant a player who could not time well made every
+       part worse by trying to help - quality fell under the poor-work
+       threshold, reputation bled away with no job ever shipping late, and the
+       run was unrecoverable. Good timing still earns quality; bad timing just
+       does not earn it. */
+    missQuality: -0.25,
     autoQualityPull: 58,    // unattended machines drift toward merely acceptable
     autoQualityRate: 0.08,
-    latePenalty: 0.6,       // pay multiplier on a late delivery
+    latePenalty: 0.6, lateStep: 0.2,       // pay multiplier on a late delivery
+
+    /* Reputation. Named here so the in-game manual quotes the same numbers
+       the simulation applies, instead of a copy that drifts. */
+    repLate: -5, repLateFresh: -2,            // shipped after the deadline
+    repGreatAt: 88, repGreat: 1,
+    repGoodAt: 74, repGood: 0.5,
+    repPoorAt: 50, repPoor: -2,
+    repRackOverdue: -1,     // per overdue job left on the rack, per day
+    repBailout: -5,         // taking the emergency loan
+    repBoardBonusAt: 70,    // an extra offer on the board from here up
+    repCleanDay: 0.5,       // a day's work with nothing late rebuilds your name
+
     boardSize: 4,
 
     /* Night shift: the crew keeps working while the app is closed.
@@ -40,6 +63,15 @@
 
     /* Something turns up at the shop. Fired at day close, never two days
        running, and never before the player has a shop worth disrupting. */
+    /* Work supply. The board used to post a fixed four offers at dawn, which a
+       developed shop with dozens of bays cleared in seconds and then sat idle.
+       Capacity now grows with the shop, and offers arrive through the day. */
+    boardPerLevel: 0.5,          // extra board slots per shop level
+    boardMax: 12,
+    offerIntervalBase: 13,       // seconds between walk-up offers at level 1
+    offerIntervalPerLevel: 0.7,  // shaved off per level
+    offerIntervalMin: 3.5,
+
     eventChance: 0.38,
     eventCooldownDays: 2,
     eventMinDay: 3
@@ -47,13 +79,13 @@
 
   // Each station is one process step. Order here is the order jobs travel in.
   FAB.STATIONS = [
-    { key: 'cut',    name: 'Plasma Table',  icon: '⚡', color: '#58c7ff', baseRate: 5.0, unlockLevel: 1, markerSpeed: 0.62 },
-    { key: 'bend',   name: 'Press Brake',   icon: '⤵', color: '#ffd166', baseRate: 4.5, unlockLevel: 2, markerSpeed: 0.70 },
-    { key: 'weld',   name: 'MIG Bay',       icon: '☀', color: '#ff8a1f', baseRate: 4.0, unlockLevel: 1, markerSpeed: 0.80 },
-    { key: 'finish', name: 'Grind & Paint', icon: '✨', color: '#4ade80', baseRate: 6.0, unlockLevel: 3, markerSpeed: 0.90 },
-    { key: 'laser',  name: 'Tube Laser',    icon: '◎', color: '#a78bfa', baseRate: 8.0, unlockLevel: 6, markerSpeed: 1.05 },
-    { key: 'mill',   name: 'CNC Mill',      icon: '⚙', color: '#2dd4bf', baseRate: 3.2, unlockLevel: 8, markerSpeed: 0.55 },
-    { key: 'coat',   name: 'Powder Coat',   icon: '❖', color: '#fb7185', baseRate: 5.5, unlockLevel: 9, markerSpeed: 0.75 }
+    { key: 'cut',    name: 'Plasma Table',  icon: '⚡', color: '#58c7ff', baseRate: 7.0, unlockLevel: 1, markerSpeed: 0.62 },
+    { key: 'bend',   name: 'Press Brake',   icon: '⤵', color: '#ffd166', baseRate: 6.3, unlockLevel: 2, markerSpeed: 0.70 },
+    { key: 'weld',   name: 'MIG Bay',       icon: '☀', color: '#ff8a1f', baseRate: 5.6, unlockLevel: 1, markerSpeed: 0.80 },
+    { key: 'finish', name: 'Grind & Paint', icon: '✨', color: '#4ade80', baseRate: 8.4, unlockLevel: 3, markerSpeed: 0.90 },
+    { key: 'laser',  name: 'Tube Laser',    icon: '◎', color: '#a78bfa', baseRate: 11.0, unlockLevel: 6, markerSpeed: 1.05 },
+    { key: 'mill',   name: 'CNC Mill',      icon: '⚙', color: '#2dd4bf', baseRate: 4.5, unlockLevel: 8, markerSpeed: 0.55 },
+    { key: 'coat',   name: 'Powder Coat',   icon: '❖', color: '#fb7185', baseRate: 7.7, unlockLevel: 9, markerSpeed: 0.75 }
   ];
 
   FAB.STATION_BY_KEY = {};
@@ -73,9 +105,9 @@
       ops: [['cut', 500], ['weld', 650], ['finish', 300]] },
     { key: 'stringer', name: 'Stair Stringers',   level: 5, pay: 1550, days: 4, xp: 46,
       ops: [['cut', 650], ['bend', 475], ['weld', 525], ['finish', 350]] },
-    { key: 'chassis',  name: 'Trailer Chassis',   level: 6, pay: 2700, days: 5, xp: 70,
+    { key: 'chassis',  name: 'Trailer Chassis',   level: 6, pay: 2700, days: 4, xp: 70,
       ops: [['cut', 850], ['bend', 550], ['weld', 1075], ['finish', 550]] },
-    { key: 'hopper',   name: 'Conveyor Hopper',   level: 7, pay: 3400, days: 5, xp: 88,
+    { key: 'hopper',   name: 'Conveyor Hopper',   level: 7, pay: 3400, days: 4, xp: 88,
       ops: [['cut', 750], ['bend', 975], ['weld', 825], ['finish', 675]] },
     { key: 'tuberack', name: 'Tube Frame Rack',   level: 6, pay: 2900, days: 4, xp: 100,
       ops: [['laser', 520], ['bend', 360], ['weld', 420]] },
@@ -83,11 +115,11 @@
       ops: [['cut', 320], ['mill', 760], ['finish', 280]] },
     { key: 'manifold', name: 'Manifold Block',    level: 9, pay: 5000, days: 4, xp: 175,
       ops: [['mill', 980], ['finish', 320]] },
-    { key: 'skid',     name: 'Skid Base',         level: 9, pay: 7200, days: 5, xp: 230,
+    { key: 'skid',     name: 'Skid Base',         level: 9, pay: 7200, days: 4, xp: 230,
       ops: [['laser', 640], ['bend', 420], ['weld', 760], ['coat', 480]] },
-    { key: 'mezz',     name: 'Mezzanine Kit',     level: 11, pay: 10500, days: 6, xp: 300,
+    { key: 'mezz',     name: 'Mezzanine Kit',     level: 11, pay: 10500, days: 5, xp: 300,
       ops: [['laser', 940], ['bend', 720], ['weld', 980], ['coat', 640]] },
-    { key: 'robocell', name: 'Robot Cell',        level: 12, pay: 15000, days: 6, xp: 400,
+    { key: 'robocell', name: 'Robot Cell',        level: 12, pay: 15000, days: 5, xp: 400,
       ops: [['laser', 1050], ['mill', 880], ['bend', 640], ['weld', 980], ['coat', 760]] }
   ];
 
@@ -119,6 +151,22 @@
       max: 5,
       cost: function (n) { return Math.round(800 * Math.pow(2.1, n)); },
       apply: function (g) { g.payMult += 0.12; }
+    },
+    {
+      key: 'office',
+      name: 'Sales Office',
+      desc: 'Someone chasing work full time. More offers on the board.',
+      max: 5,
+      cost: function (n) { return Math.round(1400 * Math.pow(2.05, n)); },
+      apply: function (g) { g.boardBonus += 1; }
+    },
+    {
+      key: 'shift',
+      name: 'Second Shift',
+      desc: 'Nights covered. Every operator works faster.',
+      max: 8,
+      cost: function (n) { return Math.round(2400 * Math.pow(1.95, n)); },
+      apply: function (g) { g.operatorMult += 0.12; }
     },
     {
       key: 'jigs',
@@ -492,7 +540,7 @@
   };
 
   FAB.operatorCost = function (count) {
-    return Math.round(900 * Math.pow(2.15, count));
+    return Math.round(420 * Math.pow(2.0, count));
   };
 
 })(window.FAB = window.FAB || {});

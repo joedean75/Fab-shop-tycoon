@@ -27,7 +27,7 @@
   }
 
   function start() {
-    modals = ['report', 'nightshift', 'event'].map(function (id) {
+    modals = ['report', 'nightshift', 'event', 'manual'].map(function (id) {
       return document.getElementById(id);
     }).filter(Boolean);
 

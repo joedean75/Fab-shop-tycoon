@@ -1,0 +1,124 @@
+FAB SHOP TYCOON - GOOGLE PLAY STORE LISTING
+==============================================================================
+Package name : com.fabshoptycoon.game
+Version      : 1.5.0 (versionCode 10500)
+Generated    : 2026-09-25  (node tools/make-listing-sheet.js)
+
+Everything below is ready to paste into Play Console. Character counts are
+shown against Google's limits - all are within range.
+
+------------------------------------------------------------------------------
+STORE LISTING  ->  Grow > Store presence > Main store listing
+------------------------------------------------------------------------------
+
+APP NAME  (15 / 30 characters)
+----------------------------------------
+Fab Shop Tycoon
+
+SHORT DESCRIPTION  (77 / 80 characters)
+----------------------------------------
+Run a metal fab shop. Take orders, cut, bend, weld, ship before the deadline.
+
+FULL DESCRIPTION  (2931 / 4000 characters)
+----------------------------------------
+You own a small metal fabrication shop. Work comes in off the board, steel moves across the floor, and every ticket has a date on it. Ship good parts on time and the phone keeps ringing. Ship late or sloppy and it stops.
+
+CUT, BEND, WELD, SHIP
+Every job routes itself through the machines it needs: the plasma table, the press brake, the MIG bay, the grind-and-paint booth, and, as the shop grows, the tube laser, the CNC mill and the powder coat line. Your hands are on the machines. Tap a running machine as the marker crosses the green band — nail the timing and the work flies, and the part comes out clean. Rush it and you can still ship, but the quality shows.
+
+QUALITY IS THE WHOLE GAME
+Every part carries a quality number, and that number sets your payout and your reputation. Reputation sets what the board pays you next. A shop that ships beautiful work gets better tickets; a shop that ships junk grinds away at its own margins.
+
+HIRE THE FLOOR, LOSE THE TOUCH
+Operators run a machine without you, day and night. They are also only ever adequate — parts they run alone drift toward merely acceptable. Automation buys you time and costs you margin, and deciding where to spend your own attention is the real management problem.
+
+RUN THE BUSINESS
+Rent, wages, and power come out every night whether you shipped or not. Upgrade machines for speed and more bays, add rack space for more jobs in flight, and unlock heavier work as your shop levels up — from weld brackets and gusset sets through handrails and stair stringers to trailer chassis and conveyor hoppers.
+
+SELL UP AND OPEN A BIGGER SHOP
+When you have taken a shop as far as it goes, sell it. You bank blueprints for what it earned, and everything else - cash, machines, crew, shop level - starts over in a bigger building. Blueprints buy permanent upgrades that carry across every shop you ever own: seed capital, a tooling library so machines start further up, a union hall that makes operators quicker, a trade school, and shop records that open the next place several levels in. Each relocation makes the climb faster than the last.
+
+SOMETHING ALWAYS TURNS UP
+A machine throws a fault mid-cut: pay the callout, or fix it yourself and lose it for two days while work piles up behind it. The steel price jumps overnight. An apprentice turns up wanting hours. A regular calls in a favour that no sensible shop would promise. Every one is a decision, and every one costs or pays.
+
+THE SHOP RUNS WITHOUT YOU
+Close the app and your operators keep working the jobs on the floor. Come back to finished work, parts shipped and the money banked. The calendar waits for you, so nothing goes late while you are gone - but a shop with nobody hired sits idle until you come back.
+
+BUILT TO PLAY IN SHORT SHIFTS
+A day takes under a minute. Progress saves itself. No accounts, no ads, no in-app purchases, no timers begging you to come back, and nothing to buy. Plays offline.
+
+------------------------------------------------------------------------------
+GRAPHICS  ->  same page, scroll down
+------------------------------------------------------------------------------
+
+App icon          512 x 512 PNG     store/play/icon-512.png
+                  32-bit with alpha - Play requires the alpha channel
+Feature graphic   1024 x 500 PNG    store/play/feature-graphic-1024x500.png
+Phone screenshots 1080 x 1920 PNG   store/play/screenshots/phone/          (7 files)
+7-inch tablet     1200 x 1920 PNG   store/play/screenshots/tablet-7/       (7 files)
+10-inch tablet    1600 x 2560 PNG   store/play/screenshots/tablet-10/      (7 files)
+
+Play requires at least 2 phone screenshots and allows up to 8. Tablet sets
+are optional but they unlock the tablet listing.
+
+------------------------------------------------------------------------------
+RELEASE NOTES  ->  Test and release > (track) > Create new release
+------------------------------------------------------------------------------
+
+WHAT'S NEW  (458 / 500 characters)
+----------------------------------------
+A busier board and a fairer shop.
+
+Orders arrive through the day instead of once a morning, and the board grows with your shop level. Every machine now comes with an operator on it.
+
+A missed tap barely dents quality, a late job loses its ticket by the day rather than all at once, and a clean day rebuilds reputation.
+
+Turn off auto-load to place jobs yourself - an ejected job keeps its progress. The new manual behind the ? spells out every gain and loss.
+
+------------------------------------------------------------------------------
+STORE SETTINGS  ->  Grow > Store presence > Store settings
+------------------------------------------------------------------------------
+
+App category      Game
+Category          Simulation
+Tags              up to 5, suggested: Simulation, Casual, Idle, Management,
+                  Tycoon
+Email address     corvuscompanies6@gmail.com
+Website           https://fab-shop-tycoon.onrender.com
+External privacy  https://fab-shop-tycoon.onrender.com/privacy.html
+
+------------------------------------------------------------------------------
+APP CONTENT  ->  Policy > App content   (each is its own form)
+------------------------------------------------------------------------------
+
+Privacy policy          https://fab-shop-tycoon.onrender.com/privacy.html
+App access              All functionality available without special access.
+Ads                     No, my app does not contain ads.
+Content rating          Category: Game. Answer No to every content question.
+                        Expected: ESRB Everyone / PEGI 3 / USK 0.
+                        Full answers: store/play/content-rating.md
+Target audience         13+ recommended. Declaring under-13 pulls the app
+                        into Families policy and its extra requirements.
+Data safety             No data collected, none shared, no third-party SDKs.
+                        Save data stays in local storage on the device.
+                        Full answers: store/play/data-safety.md
+Government apps         No.      Financial features  None of these.
+Health apps             No.      News apps           No.
+Data deletion           Not applicable - no account, no collected data.
+
+------------------------------------------------------------------------------
+PRICING  ->  Monetise > Pricing
+------------------------------------------------------------------------------
+
+Free. No in-app purchases, no subscriptions, no ads.
+
+------------------------------------------------------------------------------
+NOTES
+------------------------------------------------------------------------------
+
+- Upload to a test track before Production: no review wait, and it is the
+  only way to confirm the native shell behaves on a real device.
+- Never upload the .jks keystore anywhere. It signs the bundle and stays
+  on your machine.
+- A personal developer account opened after late 2023 may need a closed test
+  with about 12 testers for 14 continuous days before Production unlocks.
