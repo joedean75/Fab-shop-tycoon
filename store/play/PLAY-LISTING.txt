@@ -1,8 +1,8 @@
 FAB SHOP TYCOON - GOOGLE PLAY STORE LISTING
 ==============================================================================
 Package name : com.fabshoptycoon.game
-Version      : 1.4.0 (versionCode 10400)
-Generated    : 2026-09-18  (node tools/make-listing-sheet.js)
+Version      : 1.5.0 (versionCode 10500)
+Generated    : 2026-09-25  (node tools/make-listing-sheet.js)
 
 Everything below is ready to paste into Play Console. Character counts are
 shown against Google's limits - all are within range.
@@ -65,13 +65,15 @@ are optional but they unlock the tablet listing.
 RELEASE NOTES  ->  Test and release > (track) > Create new release
 ------------------------------------------------------------------------------
 
-WHAT'S NEW  (341 / 500 characters)
+WHAT'S NEW  (458 / 500 characters)
 ----------------------------------------
-Take the controls.
+A busier board and a fairer shop.
 
-Turn off auto-load and put jobs on the machines yourself - eject a running job and it goes back to the rack with its progress intact, so an urgent order can take the bay.
+Orders arrive through the day instead of once a morning, and the board grows with your shop level. Every machine now comes with an operator on it.
 
-New in-game manual behind the ? on the shop floor: exactly what earns and costs reputation, how quality sets your pay, and what the night shift does.
+A missed tap barely dents quality, a late job loses its ticket by the day rather than all at once, and a clean day rebuilds reputation.
+
+Turn off auto-load to place jobs yourself - an ejected job keeps its progress. The new manual behind the ? spells out every gain and loss.
 
 ------------------------------------------------------------------------------
 STORE SETTINGS  ->  Grow > Store presence > Store settings

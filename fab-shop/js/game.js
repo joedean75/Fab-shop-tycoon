@@ -56,6 +56,8 @@
       qualityBonus: 0,
       operatorMult: 1,
       xpMult: 1,
+      boardBonus: 0,
+      offerTimer: 0,
       autoQualityPull: T.autoQualityPull,
       stations: FAB.STATIONS.map(makeStation),
       jobs: [],
@@ -75,6 +77,15 @@
       stats: meta.stats || { completed: 0, late: 0, earned: 0, bestDay: 0, bestRun: 0 }
     };
     FAB.game = g;
+    /* A hand on every machine the shop opens with. One operator was not
+       enough to be worth anything: every product needs at least two stations,
+       so a job would finish its first operation and then park forever on an
+       unstaffed machine. A shop that cannot complete a single job unaided has
+       no baseline at all, and the tap stops being an accelerator and becomes
+       the only engine. */
+    g.stations.forEach(function (st) {
+      if (FAB.STATION_BY_KEY[st.key].unlockLevel <= 1) st.operators = 1;
+    });
     applyPerks(g);
     restockBoard();
     return g;
@@ -249,10 +260,44 @@
     return job;
   };
 
+  /* How much work the shop can have waiting at once. It grows with the shop,
+     because a floor with thirty bays cannot be fed by four offers a day. */
+  FAB.boardCapacity = function (g) {
+    g = g || FAB.game;
+    var size = T.boardSize
+      + Math.floor((g.level - 1) * T.boardPerLevel)
+      + (g.rep >= T.repBoardBonusAt ? 1 : 0)
+      + (g.boardBonus || 0);
+    return Math.min(size, T.boardMax);
+  };
+
+  // Seconds between walk-up offers; a busier shop hears about work sooner.
+  FAB.offerInterval = function (g) {
+    g = g || FAB.game;
+    return Math.max(T.offerIntervalMin,
+      T.offerIntervalBase - (g.level - 1) * T.offerIntervalPerLevel);
+  };
+
   function restockBoard() {
-    var size = T.boardSize + (FAB.game.rep >= T.repBoardBonusAt ? 1 : 0);
-    FAB.game.board = [];
-    for (var i = 0; i < size; i++) FAB.game.board.push(makeOffer());
+    var g = FAB.game;
+    g.board = [];
+    var size = FAB.boardCapacity(g);
+    for (var i = 0; i < size; i++) g.board.push(makeOffer());
+    g.offerTimer = 0;
+  }
+
+  /* Work turns up during the day, not just at dawn. Without this the board is
+     emptied within seconds of opening and the floor stands idle until morning. */
+  function trickleOffers(dt) {
+    var g = FAB.game;
+    if (g.board.length >= FAB.boardCapacity(g)) return;
+    g.offerTimer = (g.offerTimer || 0) + dt;
+    var interval = FAB.offerInterval(g);
+    while (g.offerTimer >= interval && g.board.length < FAB.boardCapacity(g)) {
+      g.offerTimer -= interval;
+      g.board.push(makeOffer());
+      emit('dirty');
+    }
   }
   FAB.restockBoard = restockBoard;
 
@@ -401,9 +446,13 @@
   function shipJob(job) {
     var g = FAB.game;
     var product = FAB.jobProduct(job);
-    var late = g.day > job.due;
+    var daysLate = g.day - job.due;
+    var late = daysLate > 0;
+    /* One day over is an apology; a week over is a lost customer. Grading the
+       penalty keeps a slow shop from falling off a cliff on its first slip. */
+    var lateMult = late ? Math.max(T.latePenalty, 1 - T.lateStep * daysLate) : 1;
     var qualityMult = 0.8 + job.quality / 100 * 0.45;
-    var payout = Math.round(job.pay * qualityMult * (late ? T.latePenalty : 1));
+    var payout = Math.round(job.pay * qualityMult * lateMult);
 
     g.money += payout;
     g.ledger.revenue += payout;
@@ -416,7 +465,7 @@
     if (late) {
       g.ledger.late += 1;
       g.stats.late += 1;
-      g.rep = clamp(g.rep + T.repLate, 0, 100);
+      g.rep = clamp(g.rep + (daysLate <= 1 ? T.repLateFresh : T.repLate), 0, 100);
     } else if (job.quality >= T.repGreatAt) {
       g.rep = clamp(g.rep + T.repGreat, 0, 100);
     } else if (job.quality >= T.repGoodAt) {
@@ -445,9 +494,14 @@
       g.level += 1;
       emit('toast', { text: 'Shop level ' + g.level + '! New work on the board.', tone: 'good' });
       FAB.STATIONS.forEach(function (def) {
-        if (def.unlockLevel === g.level) {
-          emit('toast', { text: def.name + ' unlocked.', tone: 'good' });
-        }
+        if (def.unlockLevel !== g.level) return;
+        /* A new machine arrives with a hand on it. An unstaffed station is a
+           dead end - jobs route onto it and sit there - and the player has no
+           reason to guess that a brand new machine needs hiring before it
+           turns. The wage still comes out every night. */
+        var st = FAB.station(def.key);
+        if (st && st.operators < 1) st.operators = 1;
+        emit('toast', { text: def.name + ' unlocked, with an operator on it.', tone: 'good' });
       });
       restockBoard();
       emit('dirty');
@@ -503,7 +557,7 @@
       wages += st.operators * T.wagePerOperator;
       power += (st.level - 1) * T.powerPerMachineLevel;
     });
-    var rent = T.baseOverhead * (1 + T.overheadGrowth * (g.day - 1)) + (g.wipMax - 3) * 60;
+    var rent = T.baseOverhead * (1 + T.overheadPerLevel * (g.level - 1)) + (g.wipMax - 3) * 60;
     var surcharge = FAB.surchargeToday();
     var overhead = Math.round(rent + wages + power + surcharge);
     g.money -= overhead;
@@ -519,6 +573,12 @@
       cash: Math.round(g.money)
     };
     if (report.net > g.stats.bestDay) g.stats.bestDay = report.net;
+
+    // A day's work with nothing late rebuilds standing slowly. Without it a
+    // bad stretch left reputation pinned at zero with no way back.
+    if (g.ledger.jobs > 0 && g.ledger.late === 0) {
+      g.rep = clamp(g.rep + T.repCleanDay, 0, 100);
+    }
 
     // Racked work that blew its deadline still costs you standing.
     g.jobs.forEach(function (job) {
@@ -637,6 +697,7 @@
     if (!g) return;
 
     g.dayTime += dt;
+    trickleOffers(dt);
     if (g.dayTime >= T.dayLength) closeDay();
 
     routeJobs();
@@ -903,7 +964,8 @@
       // Saves from before the prestige update lack these entirely.
       var g = FAB.game;
       var defaults = {
-        operatorMult: 1, xpMult: 1, autoQualityPull: T.autoQualityPull,
+        operatorMult: 1, xpMult: 1, boardBonus: 0, offerTimer: 0,
+        autoQualityPull: T.autoQualityPull,
         runEarned: 0, blueprints: 0, blueprintsTotal: 0, runs: 0
       };
       Object.keys(defaults).forEach(function (k) {

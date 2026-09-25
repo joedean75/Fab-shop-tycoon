@@ -37,6 +37,7 @@
     el.blueprintBar = $('blueprint-bar');
     el.relocatePanel = $('relocate-panel');
     el.perkList = $('perk-list');
+    el.records = $('records');
 
     buildStations();
     bindTabs();
@@ -101,6 +102,9 @@
           v.classList.remove('is-active');
         });
         $('view-' + tab.dataset.view).classList.add('is-active');
+        // Lists only redraw when something marks them dirty, so a tab opened
+        // between two events would otherwise show figures from last time.
+        UI.markDirty();
       });
     });
   }
@@ -391,6 +395,18 @@
     el.relocatePanel.className = 'relocate-panel' + (ready ? ' ready' : '');
     el.relocatePanel.innerHTML = body;
 
+    // Figures the game has always kept and never shown.
+    var st = g.stats;
+    var onTime = st.completed ? Math.round((st.completed - st.late) / st.completed * 100) : 100;
+    el.records.innerHTML =
+      '<dt>Jobs shipped</dt><dd>' + st.completed + '</dd>' +
+      '<dt>Shipped on time</dt><dd class="' + (onTime >= 90 ? 'pos' : '') + '">' + onTime + '%</dd>' +
+      '<dt>Earned all-time</dt><dd class="pos">' + money(st.earned) + '</dd>' +
+      '<dt>Best day</dt><dd>' + money(st.bestDay || 0) + '</dd>' +
+      '<dt>Best shop</dt><dd>' + money(st.bestRun || 0) + '</dd>' +
+      '<dt>This shop so far</dt><dd>' + money(g.runEarned) + '</dd>' +
+      '<dt>Shops run</dt><dd>' + (g.runs + 1) + '</dd>';
+
     el.perkList.innerHTML = FAB.PERKS.map(function (def) {
       var owned = g.perks[def.key] || 0;
       var maxed = owned >= def.max;
@@ -565,7 +581,8 @@
         row('Ship at quality ' + T.repGreatAt + '+', signed(T.repGreat), 'up') +
         row('Ship at quality ' + T.repGoodAt + '-' + (T.repGreatAt - 1), signed(T.repGood), 'up') +
         row('Ship at quality under ' + T.repPoorAt, signed(T.repPoor), 'down') +
-        row('Ship after the deadline', signed(T.repLate), 'down') +
+        row('Ship a day after the deadline', signed(T.repLateFresh), 'down') +
+        row('Ship more than a day late', signed(T.repLate), 'down') +
         row('Each overdue job left on the rack, per day', signed(T.repRackOverdue), 'down') +
         row('Emergency loan when cash runs out', signed(T.repBailout), 'down') +
       '</table>' +
@@ -579,11 +596,20 @@
       'to the rack with its progress intact, so you can free a bay for something ' +
       'more urgent.</p>' +
 
+      '<h3>Machines and operators</h3>' +
+      '<p>Every machine arrives with one operator on it, and that hand works ' +
+      'the bay on its own while you are tapping somewhere else. Levelling a ' +
+      'machine makes it faster, and every second level adds a bay you can hire ' +
+      'another operator into. Each hand costs ' + money(T.wagePerOperator) +
+      ' a day in wages, and each machine level ' + money(T.powerPerMachineLevel) +
+      ' a day in power, so a big shop has to keep shipping.</p>' +
+
       '<h3>The day</h3>' +
       '<p>A day lasts ' + T.dayLength + ' seconds and ends with rent, wages and ' +
       'power coming out whether you shipped or not. Deadlines are counted in days, ' +
-      'and a late delivery pays only ' + Math.round(T.latePenalty * 100) + '% of ' +
-      'its ticket on top of the reputation hit.</p>' +
+      'and a late delivery loses ' + Math.round(T.lateStep * 100) + '% of its ticket ' +
+      'for every day it is over, down to ' + Math.round(T.latePenalty * 100) + '%, ' +
+      'on top of the reputation hit.</p>' +
 
       '<h3>While you are away</h3>' +
       '<p>Hired operators keep working the jobs on the floor when the app is ' +
