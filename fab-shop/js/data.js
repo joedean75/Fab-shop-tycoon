@@ -187,6 +187,46 @@
                       Math.pow(growth, Math.max(0, level - 5)));
   };
 
+  /* ---- Goals: one at a time, always something to aim at ----
+     A fixed chain that runs across every shop the player owns, so it is
+     stored with the lifetime records rather than the run. progress() returns
+     [have, need]; a goal pays its reward the moment have reaches need. */
+  function maxOver(g, field) {
+    return g.stations.reduce(function (m, st) { return Math.max(m, st[field]); }, 0);
+  }
+  function upgradesOwned(g) {
+    return Object.keys(g.upgrades || {}).reduce(function (n, k) { return n + g.upgrades[k]; }, 0);
+  }
+  function shipped(n) { return function (g) { return [g.stats.completed, n]; }; }
+  function shopLevel(n) { return function (g) { return [g.level, n]; }; }
+
+  FAB.GOALS = [
+    { text: 'Ship your first job',                 progress: shipped(1),   cash: 150 },
+    { text: 'Level up a machine',
+      progress: function (g) { return [maxOver(g, 'level') >= 2 ? 1 : 0, 1]; }, cash: 250 },
+    { text: 'Ship 10 jobs',                        progress: shipped(10),  cash: 400 },
+    { text: 'Reach shop level 3',                  progress: shopLevel(3), cash: 600 },
+    { text: 'Ship a part at quality 80 or better',
+      progress: function (g) { return [Math.floor(g.stats.bestQuality || 0), 80]; }, cash: 600 },
+    { text: 'Put a second operator on one machine',
+      progress: function (g) { return [maxOver(g, 'operators') >= 2 ? 1 : 0, 1]; }, cash: 900 },
+    { text: 'Reach reputation 70',
+      progress: function (g) { return [Math.floor(g.rep), 70]; }, cash: 1000 },
+    { text: 'Install a shop upgrade',
+      progress: function (g) { return [Math.min(upgradesOwned(g), 1), 1]; }, cash: 1200 },
+    { text: 'Ship 50 jobs',                        progress: shipped(50),  cash: 2500 },
+    { text: 'Clear $3,000 profit in one day',
+      progress: function (g) { return [Math.max(0, Math.round(g.stats.bestDay)), 3000]; }, cash: 3000 },
+    { text: 'Reach shop level 6',                  progress: shopLevel(6), cash: 5000 },
+    { text: 'Ship 150 jobs',                       progress: shipped(150), cash: 8000 },
+    { text: 'Reach shop level 10',                 progress: shopLevel(10), cash: 15000 },
+    { text: 'Sell a shop and open another',
+      progress: function (g) { return [g.runs, 1]; }, blueprints: 2 },
+    { text: 'Ship 500 jobs',                       progress: shipped(500), cash: 40000 },
+    { text: 'Reach shop level 15',                 progress: shopLevel(15), cash: 75000 },
+    { text: 'Ship 1,000 jobs',                     progress: shipped(1000), blueprints: 5 }
+  ];
+
   /* ---- Prestige: sell up and open a bigger shop ----
      Blueprints are the permanent currency. They carry a passive pay bonus and
      buy perks that persist across relocations. */

@@ -34,7 +34,9 @@
     if (!FAB.load()) {
       FAB.newGame();
       FAB.UI.init();
-      FAB.UI.toast('Welcome to the shop. Take an order, then tap the machines.', 'good');
+      // A first shop gets the walkthrough; a reset shop gets a reminder.
+      if (FAB.coach && !FAB.coach.seen()) FAB.coach.start();
+      else FAB.UI.toast('Welcome to the shop. Take an order, then tap the machines.', 'good');
     } else {
       // Run the night shift before the first frame, so the player sees the
       // shop as it actually stands rather than watching it catch up.
@@ -53,6 +55,10 @@
 
     FAB.UI.markDirty();
     requestAnimationFrame(frame);
+
+    // Prices, and anything this account already owns, arrive in the
+    // background; the store panel says so until they do.
+    if (FAB.store) FAB.store.init();
 
     document.addEventListener('visibilitychange', function () {
       if (document.hidden) {

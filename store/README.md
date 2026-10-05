@@ -99,7 +99,7 @@ In Xcode: select the **App** target -> Signing & Capabilities -> pick your team.
 The bundle identifier is already `com.fabshoptycoon.game`. Product -> Archive,
 then distribute to App Store Connect.
 
-In App Store Connect: create the app, set App Privacy to **Data Not Collected**
+In App Store Connect: create the app, set up the in-app purchases (above), set App Privacy to **Data Not Collected**
 (`store/appstore/app-privacy.md`), paste the listing from
 `store/appstore/listing/en-US/`, upload screenshots from
 `store/appstore/screenshots/`, and paste `store/appstore/review-notes.md` into
@@ -110,6 +110,40 @@ To automate it: add `APPLE_CERTIFICATE_P12`, `APPLE_CERTIFICATE_PASSWORD`,
 `APPSTORE_API_ISSUER_ID` and `APPSTORE_API_PRIVATE_KEY` as secrets, then run the
 **iOS release (App Store)** workflow. Without those secrets the workflow still
 compiles the app for the simulator, so the project is checked on every run.
+
+## In-app purchases
+
+Three products, defined once in `store/products.json` (ids, types, names,
+descriptions, suggested prices) and sold by `fab-shop/js/store.js` through
+`@capgo/native-purchases` - StoreKit 2 on iOS, Play Billing on Android. There
+is no server and no RevenueCat-style account: the stores are the record of
+what was bought, and the game re-reads it on every launch.
+
+| Id | Apple type | Play | Suggested |
+| --- | --- | --- | --- |
+| `com.fabshoptycoon.game.double_pay` | Non-Consumable | one-time, never consumed | $4.99 |
+| `com.fabshoptycoon.game.night_crew` | Non-Consumable | one-time, never consumed | $2.99 |
+| `com.fabshoptycoon.game.big_contract` | Consumable | one-time, consumed by the app | $0.99 |
+
+Before anything can be sold:
+
+- **Apple** - sign the **Paid Apps Agreement** and fill in banking and tax
+  (App Store Connect -> Business). Create the three products under the app's
+  **Monetization -> In-App Purchases**, each with a review screenshot of the
+  store panel, then attach them to the version you submit. Test with a
+  **Sandbox** account (Users and Access -> Sandbox) on a TestFlight build.
+- **Google** - set up a **payments profile**, upload a 1.6.0+ bundle to any
+  track (Play will not let you create products until a build with the
+  BILLING permission exists), then create the three one-time products. Add
+  your testers under **License testing** so their purchases are not charged.
+
+`npm run check:store` fails if a product id in `products.json` does not match
+what the game requests - a one-character mismatch otherwise shows up only as a
+store panel with no price on it.
+
+Purchases are stored outside the save (`fabshop.entitlements.v1`), so **Reset
+shop** and selling up never remove them; **Restore purchases** under the store
+re-reads them from the account.
 
 ## Releasing a new version
 

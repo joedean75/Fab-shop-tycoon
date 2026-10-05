@@ -1,8 +1,17 @@
 # Play Console - Data safety form
 
 Answers for the Data safety section. They follow from the code: the game has no
-network calls of its own, no SDKs, and no accounts. Re-check this if that ever
-changes, because a false declaration is a policy violation.
+network calls of its own, no analytics or ad SDKs, no accounts and no server.
+Re-check this if that ever changes, because a false declaration is a policy
+violation.
+
+**In-app purchases do not change the answer.** Play defines collection as
+"transmitting data from your app off a user's device". Payments go through
+Google Play's billing system, which Play exempts when the app never sees the
+payment details - and this one never does. The app does read which products
+the signed-in account owns, but only to unlock them on the device: it keeps a
+yes/no per product in local storage and never sends it anywhere. If a server
+or receipt validation is ever added, **Purchase history** has to be declared.
 
 | Question | Answer |
 | --- | --- |

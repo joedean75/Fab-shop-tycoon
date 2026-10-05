@@ -22,4 +22,7 @@ THE SHOP RUNS WITHOUT YOU
 Close the app and your operators keep working the jobs on the floor. Come back to finished work, parts shipped and the money banked. The calendar waits for you, so nothing goes late while you are gone - but a shop with nobody hired sits idle until you come back.
 
 BUILT TO PLAY IN SHORT SHIFTS
-A day takes under a minute. Progress saves itself. No accounts, no ads, no in-app purchases, no timers begging you to come back, and nothing to buy. Plays offline.
+A day takes under a minute. Progress saves itself. No accounts, no ads, and no timers begging you to come back. Plays offline.
+
+OPTIONAL EXTRAS, NEVER REQUIRED
+The whole game is free. If you want to support it, the store sells a Union Contract (every job pays double, for good), a Night Crew (your operators work twice as hard while you are away) and a one-off Big Contract cash boost. None of it gates any content.

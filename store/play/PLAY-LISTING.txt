@@ -1,8 +1,8 @@
 FAB SHOP TYCOON - GOOGLE PLAY STORE LISTING
 ==============================================================================
 Package name : com.fabshoptycoon.game
-Version      : 1.5.0 (versionCode 10500)
-Generated    : 2026-09-25  (node tools/make-listing-sheet.js)
+Version      : 1.6.0 (versionCode 10600)
+Generated    : 2026-10-05  (node tools/make-listing-sheet.js)
 
 Everything below is ready to paste into Play Console. Character counts are
 shown against Google's limits - all are within range.
@@ -19,7 +19,7 @@ SHORT DESCRIPTION  (77 / 80 characters)
 ----------------------------------------
 Run a metal fab shop. Take orders, cut, bend, weld, ship before the deadline.
 
-FULL DESCRIPTION  (2931 / 4000 characters)
+FULL DESCRIPTION  (3183 / 4000 characters)
 ----------------------------------------
 You own a small metal fabrication shop. Work comes in off the board, steel moves across the floor, and every ticket has a date on it. Ship good parts on time and the phone keeps ringing. Ship late or sloppy and it stops.
 
@@ -45,7 +45,10 @@ THE SHOP RUNS WITHOUT YOU
 Close the app and your operators keep working the jobs on the floor. Come back to finished work, parts shipped and the money banked. The calendar waits for you, so nothing goes late while you are gone - but a shop with nobody hired sits idle until you come back.
 
 BUILT TO PLAY IN SHORT SHIFTS
-A day takes under a minute. Progress saves itself. No accounts, no ads, no in-app purchases, no timers begging you to come back, and nothing to buy. Plays offline.
+A day takes under a minute. Progress saves itself. No accounts, no ads, and no timers begging you to come back. Plays offline.
+
+OPTIONAL EXTRAS, NEVER REQUIRED
+The whole game is free. If you want to support it, the store sells a Union Contract (every job pays double, for good), a Night Crew (your operators work twice as hard while you are away) and a one-off Big Contract cash boost. None of it gates any content.
 
 ------------------------------------------------------------------------------
 GRAPHICS  ->  same page, scroll down
@@ -65,15 +68,15 @@ are optional but they unlock the tablet listing.
 RELEASE NOTES  ->  Test and release > (track) > Create new release
 ------------------------------------------------------------------------------
 
-WHAT'S NEW  (458 / 500 characters)
+WHAT'S NEW  (467 / 500 characters)
 ----------------------------------------
-A busier board and a fairer shop.
+Your first shift, guided.
 
-Orders arrive through the day instead of once a morning, and the board grows with your shop level. Every machine now comes with an operator on it.
+New players get a short walkthrough, and goals above the machines now pay a cash bonus as the shop grows - seventeen of them, from your first shipment to your thousandth.
 
-A missed tap barely dents quality, a late job loses its ticket by the day rather than all at once, and a clean day rebuilds reputation.
+Sound and vibration: every hit, shipment and level-up now clicks, chimes and buzzes. Both can be turned off under Upgrades.
 
-Turn off auto-load to place jobs yourself - an ejected job keeps its progress. The new manual behind the ? spells out every gain and loss.
+Optional extras, at the bottom of Upgrades: double pay for good, a Night Crew that works harder while you are away, and a one-off Big Contract.
 
 ------------------------------------------------------------------------------
 STORE SETTINGS  ->  Grow > Store presence > Store settings
@@ -94,13 +97,16 @@ APP CONTENT  ->  Policy > App content   (each is its own form)
 Privacy policy          https://fab-shop-tycoon.onrender.com/privacy.html
 App access              All functionality available without special access.
 Ads                     No, my app does not contain ads.
-Content rating          Category: Game. Answer No to every content question.
+                        (In-app purchases are not ads.)
+Content rating          Category: Game. No to every content question; Yes to
+                        "allows purchases of digital goods".
                         Expected: ESRB Everyone / PEGI 3 / USK 0.
                         Full answers: store/play/content-rating.md
 Target audience         13+ recommended. Declaring under-13 pulls the app
                         into Families policy and its extra requirements.
 Data safety             No data collected, none shared, no third-party SDKs.
-                        Save data stays in local storage on the device.
+                        Save data and owned-purchase flags stay on the device;
+                        payments are handled by Google Play billing.
                         Full answers: store/play/data-safety.md
 Government apps         No.      Financial features  None of these.
 Health apps             No.      News apps           No.
@@ -110,7 +116,33 @@ Data deletion           Not applicable - no account, no collected data.
 PRICING  ->  Monetise > Pricing
 ------------------------------------------------------------------------------
 
-Free. No in-app purchases, no subscriptions, no ads.
+Free, with optional in-app purchases. No subscriptions, no ads.
+
+------------------------------------------------------------------------------
+IN-APP PRODUCTS  ->  Monetise > Products > One-time products
+------------------------------------------------------------------------------
+
+Needs a payments profile (Setup > Payments profile) and a bundle with the
+BILLING permission uploaded to any track first - 1.6.0 and later carry it.
+Create each one, set it Active, and match the ID exactly.
+
+Product ID        com.fabshoptycoon.game.double_pay
+Type              One-time product (the app never consumes it)
+Name              Union Contract
+Description       Every job pays double - in this shop and every shop after it. A one-time purchase that survives resets and selling up.
+Price             USD 4.99 (Play converts other currencies)
+
+Product ID        com.fabshoptycoon.game.night_crew
+Type              One-time product (the app never consumes it)
+Name              Night Crew
+Description       While you are away, your operators work twice as fast and keep going for 12 days instead of 6. A one-time purchase.
+Price             USD 2.99 (Play converts other currencies)
+
+Product ID        com.fabshoptycoon.game.big_contract
+Type              One-time product (the app consumes it, so it can be bought again)
+Name              Big Contract
+Description       A one-off contract paid straight into the bank, worth three of your best days. Can be bought again.
+Price             USD 0.99 (Play converts other currencies)
 
 ------------------------------------------------------------------------------
 NOTES

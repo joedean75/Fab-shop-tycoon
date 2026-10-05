@@ -43,6 +43,40 @@ LIMITS.forEach(function (item) {
   console.log('  ' + status + '  ' + item.label + '  ' + len + '/' + item.max);
 });
 
+/* In-app products: console field limits, and the ids the game asks for. A
+   product whose id differs by one character simply never loads, and the
+   store panel shows no price - so check it here instead. */
+var productsFile = path.join(ROOT, 'store/products.json');
+if (!fs.existsSync(productsFile)) {
+  problems.push('missing: store/products.json');
+} else {
+  var catalog = JSON.parse(fs.readFileSync(productsFile, 'utf8')).products;
+  var storeJs = fs.readFileSync(path.join(ROOT, 'fab-shop/js/store.js'), 'utf8');
+  var prefix = (/ID_PREFIX = '([^']+)'/.exec(storeJs) || [])[1];
+  var gameKeys = [];
+  storeJs.replace(/^\s+key: '([a-z_]+)',$/gm, function (m, k) { gameKeys.push(k); });
+  var PRODUCT_LIMITS = [
+    ['name', 30, 'App Store IAP display name'],
+    ['apple_description', 45, 'App Store IAP description'],
+    ['name', 55, 'Play product name'],
+    ['play_description', 200, 'Play product description']
+  ];
+  catalog.forEach(function (p) {
+    checked++;
+    if (p.id !== prefix + p.key) problems.push('product ' + p.key + ': id ' + p.id + ' is not ' + prefix + p.key);
+    if (gameKeys.indexOf(p.key) < 0) problems.push('product ' + p.key + ' is not sold by fab-shop/js/store.js');
+    if (!/^[a-z0-9][a-z0-9._]*$/.test(p.id)) problems.push('product ' + p.id + ': Play ids allow only a-z, 0-9, _ and .');
+    PRODUCT_LIMITS.forEach(function (lim) {
+      var len = Array.from(p[lim[0]] || '').length;
+      if (!len || len > lim[1]) problems.push(p.key + ' ' + lim[2] + ': ' + len + '/' + lim[1]);
+    });
+    console.log('  ok    product ' + p.id);
+  });
+  gameKeys.forEach(function (k) {
+    if (!catalog.some(function (p) { return p.key === k; })) problems.push('store.js sells ' + k + ' but store/products.json has no entry');
+  });
+}
+
 /* PNG dimensions straight from the IHDR chunk - no image library needed. */
 function pngSize(file) {
   var fd = fs.openSync(file, 'r');

@@ -1,0 +1,35 @@
+{
+  "_comment": "In-app products. The ids must match fab-shop/js/store.js exactly; tools/check-store-metadata.js checks that, and the length limits below. Prices are suggestions - set them in each console.",
+  "products": [
+    {
+      "id": "com.fabshoptycoon.game.double_pay",
+      "key": "double_pay",
+      "apple_type": "Non-Consumable",
+      "play_type": "One-time product (the app never consumes it)",
+      "price_usd": "4.99",
+      "name": "Union Contract",
+      "apple_description": "Every job pays double, for good.",
+      "play_description": "Every job pays double - in this shop and every shop after it. A one-time purchase that survives resets and selling up."
+    },
+    {
+      "id": "com.fabshoptycoon.game.night_crew",
+      "key": "night_crew",
+      "apple_type": "Non-Consumable",
+      "play_type": "One-time product (the app never consumes it)",
+      "price_usd": "2.99",
+      "name": "Night Crew",
+      "apple_description": "Operators work twice as hard offline.",
+      "play_description": "While you are away, your operators work twice as fast and keep going for 12 days instead of 6. A one-time purchase."
+    },
+    {
+      "id": "com.fabshoptycoon.game.big_contract",
+      "key": "big_contract",
+      "apple_type": "Consumable",
+      "play_type": "One-time product (the app consumes it, so it can be bought again)",
+      "price_usd": "0.99",
+      "name": "Big Contract",
+      "apple_description": "A one-off cash boost for your shop.",
+      "play_description": "A one-off contract paid straight into the bank, worth three of your best days. Can be bought again."
+    }
+  ]
+}
