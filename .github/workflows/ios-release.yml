@@ -1,16 +1,27 @@
 name: iOS release (App Store)
 
-# Tag a release (v1.0.0) or run manually. Archives and, with signing secrets
-# present, uploads a build to TestFlight.
+# Builds the iOS app on GitHub's Mac and sends it to TestFlight. No Mac of
+# your own is needed, and no certificate or provisioning profile either:
+# Xcode's cloud-managed signing creates them through the App Store Connect
+# API key, so the key is the only credential.
+#
+# Repository secrets (Settings -> Secrets and variables -> Actions):
+#   APPLE_TEAM_ID              10-character Team ID (developer.apple.com -> Membership)
+#   APPSTORE_API_KEY_ID        Key ID of an App Store Connect API key with the Admin role
+#   APPSTORE_API_ISSUER_ID     Issuer ID shown above the key list
+#   APPSTORE_API_PRIVATE_KEY   the whole contents of the downloaded AuthKey_XXXX.p8
+#
+# Without them the job still compiles the app for the simulator, so the
+# project is checked on every run.
 on:
   push:
     tags: ['v*']
   workflow_dispatch:
     inputs:
       upload:
-        description: 'Upload to TestFlight after archiving'
+        description: 'Upload to TestFlight (untick to build only)'
         required: false
-        default: false
+        default: true
         type: boolean
 
 jobs:
@@ -26,33 +37,33 @@ jobs:
         run: npm run verify
       - name: Versions must be in sync
         run: node tools/set-version.js --check
-      - name: Listing copy, screenshots and placeholders
+      - name: Listing copy, screenshots, products and placeholders
         run: npm run check:store
       - run: npx cap sync ios
 
-      - name: Import signing certificate and profile
+      - name: Check for signing credentials
         id: signing
         env:
-          CERT_P12: ${{ secrets.APPLE_CERTIFICATE_P12 }}
-          CERT_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-          PROFILE_B64: ${{ secrets.APPLE_PROVISIONING_PROFILE }}
+          TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          API_KEY_ID: ${{ secrets.APPSTORE_API_KEY_ID }}
+          API_ISSUER_ID: ${{ secrets.APPSTORE_API_ISSUER_ID }}
+          API_KEY_P8: ${{ secrets.APPSTORE_API_PRIVATE_KEY }}
         run: |
-          if [ -z "$CERT_P12" ] || [ -z "$PROFILE_B64" ]; then
+          if [ -z "$TEAM_ID" ] || [ -z "$API_KEY_ID" ] || [ -z "$API_ISSUER_ID" ] || [ -z "$API_KEY_P8" ]; then
             echo "signed=false" >> "$GITHUB_OUTPUT"
-            echo "::warning::Apple signing secrets are not set - compiling for the simulator only."
+            echo "::warning::App Store Connect secrets are not all set - compiling for the simulator only."
             exit 0
           fi
-          KEYCHAIN="${RUNNER_TEMP}/signing.keychain-db"
-          security create-keychain -p "" "$KEYCHAIN"
-          security set-keychain-settings -lut 21600 "$KEYCHAIN"
-          security unlock-keychain -p "" "$KEYCHAIN"
-          echo "$CERT_P12" | base64 -d > "${RUNNER_TEMP}/cert.p12"
-          security import "${RUNNER_TEMP}/cert.p12" -P "$CERT_PASSWORD" -A \
-            -t cert -f pkcs12 -k "$KEYCHAIN"
-          security list-keychain -d user -s "$KEYCHAIN"
-          mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
-          echo "$PROFILE_B64" | base64 -d > \
-            "$HOME/Library/MobileDevice/Provisioning Profiles/build.mobileprovision"
+          # The key file goes in the runner's temp dir, which is wiped when
+          # the job ends, and is never echoed.
+          KEY_PATH="${RUNNER_TEMP}/AuthKey_${API_KEY_ID}.p8"
+          printf '%s\n' "$API_KEY_P8" > "$KEY_PATH"
+          chmod 600 "$KEY_PATH"
+          if ! grep -q "BEGIN PRIVATE KEY" "$KEY_PATH"; then
+            echo "::error::APPSTORE_API_PRIVATE_KEY does not look like a .p8 file - paste the whole file, including the BEGIN and END lines."
+            exit 1
+          fi
+          echo "key_path=$KEY_PATH" >> "$GITHUB_OUTPUT"
           echo "signed=true" >> "$GITHUB_OUTPUT"
 
       - name: Compile for simulator (no signing available)
@@ -63,44 +74,75 @@ jobs:
             -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build
 
-      - name: Archive and export IPA
+      # Every upload needs a build number App Store Connect has not seen for
+      # this version, so re-running the workflow must not reuse one. The
+      # run number only ever goes up: 1.6.0 run 14 uploads as build 10600.14.
+      - name: Build number
+        id: build
+        run: |
+          CODE=$(node -e "const v=require('./package.json').version.split('.').map(Number);console.log(v[0]*10000+v[1]*100+v[2])")
+          echo "number=${CODE}.${GITHUB_RUN_NUMBER}" >> "$GITHUB_OUTPUT"
+
+      # Archive unsigned, then let the export sign it. Signing the archive
+      # itself would need a development profile, and Apple will not make one
+      # for a team with no registered iPhone - which is every team that has
+      # never plugged a device into a Mac. Distribution signing has no such
+      # rule. The app has no entitlements file, so nothing is lost.
+      - name: Archive
         if: steps.signing.outputs.signed == 'true'
         working-directory: ios/App
         env:
           TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
           xcodebuild -project App.xcodeproj -scheme App -configuration Release \
+            -destination 'generic/platform=iOS' \
             -archivePath "${RUNNER_TEMP}/App.xcarchive" \
-            DEVELOPMENT_TEAM="$TEAM_ID" archive
+            DEVELOPMENT_TEAM="$TEAM_ID" \
+            CURRENT_PROJECT_VERSION="${{ steps.build.outputs.number }}" \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
+            archive
+
+      - name: Sign, export and upload
+        if: steps.signing.outputs.signed == 'true'
+        working-directory: ios/App
+        env:
+          TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          API_KEY_ID: ${{ secrets.APPSTORE_API_KEY_ID }}
+          API_ISSUER_ID: ${{ secrets.APPSTORE_API_ISSUER_ID }}
+          UPLOAD: ${{ github.event_name == 'push' || inputs.upload }}
+        run: |
+          DESTINATION=export
+          if [ "$UPLOAD" = "true" ]; then DESTINATION=upload; fi
           cat > "${RUNNER_TEMP}/ExportOptions.plist" <<PLIST
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
           <plist version="1.0"><dict>
             <key>method</key><string>app-store-connect</string>
+            <key>destination</key><string>${DESTINATION}</string>
+            <key>signingStyle</key><string>automatic</string>
             <key>teamID</key><string>${TEAM_ID}</string>
             <key>uploadSymbols</key><true/>
+            <key>manageAppVersionAndBuildNumber</key><false/>
           </dict></plist>
           PLIST
-          xcodebuild -exportArchive -archivePath "${RUNNER_TEMP}/App.xcarchive" \
+          # -allowProvisioningUpdates with the API key lets Xcode create the
+          # cloud-managed distribution certificate and the App Store profile
+          # on the fly. The key needs the Admin role for the certificate.
+          xcodebuild -exportArchive \
+            -archivePath "${RUNNER_TEMP}/App.xcarchive" \
             -exportOptionsPlist "${RUNNER_TEMP}/ExportOptions.plist" \
-            -exportPath "${RUNNER_TEMP}/export"
+            -exportPath "${RUNNER_TEMP}/export" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "${{ steps.signing.outputs.key_path }}" \
+            -authenticationKeyID "$API_KEY_ID" \
+            -authenticationKeyIssuerID "$API_ISSUER_ID"
+          if [ "$DESTINATION" = "upload" ]; then
+            echo "::notice::Build ${{ steps.build.outputs.number }} uploaded. It appears in App Store Connect -> TestFlight after Apple finishes processing it (usually 10-30 minutes)."
+          fi
 
       - uses: actions/upload-artifact@v4
-        if: steps.signing.outputs.signed == 'true'
+        if: steps.signing.outputs.signed == 'true' && !(github.event_name == 'push' || inputs.upload)
         with:
           name: fab-shop-ipa
           path: ${{ runner.temp }}/export/*.ipa
           if-no-files-found: error
-
-      # App Store Connect API key: issuer id, key id, and the .p8 contents.
-      - name: Upload to TestFlight
-        if: steps.signing.outputs.signed == 'true' && (github.event_name == 'push' || inputs.upload)
-        env:
-          API_KEY_ID: ${{ secrets.APPSTORE_API_KEY_ID }}
-          API_ISSUER_ID: ${{ secrets.APPSTORE_API_ISSUER_ID }}
-          API_KEY_P8: ${{ secrets.APPSTORE_API_PRIVATE_KEY }}
-        run: |
-          mkdir -p ~/.appstoreconnect/private_keys
-          echo "$API_KEY_P8" > ~/.appstoreconnect/private_keys/AuthKey_${API_KEY_ID}.p8
-          xcrun altool --upload-app -f "${RUNNER_TEMP}"/export/*.ipa -t ios \
-            --apiKey "$API_KEY_ID" --apiIssuer "$API_ISSUER_ID"
