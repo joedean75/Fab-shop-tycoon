@@ -19,3 +19,20 @@ services:
       - path: /*
         name: X-Content-Type-Options
         value: nosniff
+
+  # Fab Shop Toolkit: calculators, bend simulator, laser nester, quotes.
+  - type: web
+    name: fab-shop-toolkit
+    runtime: static
+    buildCommand: node tools/verify-tools.js
+    staticPublishPath: ./fab-tools
+    headers:
+      - path: /sw.js
+        name: Cache-Control
+        value: no-cache
+      - path: /index.html
+        name: Cache-Control
+        value: no-cache
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
