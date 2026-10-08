@@ -10,8 +10,11 @@ if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
 }
 
+// An unset secret reaches the build as an empty string, not as nothing:
+// treat both as "not configured" so CI falls back to an unsigned bundle.
 def resolveSigning = { String key, String env ->
-    return keystoreProperties.getProperty(key) ?: System.getenv(env)
+    def value = keystoreProperties.getProperty(key) ?: System.getenv(env)
+    return value?.trim() ? value : null
 }
 
 android {
