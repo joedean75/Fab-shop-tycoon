@@ -39,6 +39,7 @@ var DEVICES = [
 /* A staged shop: busy enough to look alive, honest about what the game is. */
 function stageState() {
   FAB.reset();
+  if (FAB.coach) FAB.coach.stop();   // a staged veteran shop, not a first launch
   var g = FAB.game;
   g.money = 48450;
   g.day = 26;
@@ -52,7 +53,7 @@ function stageState() {
   g.runEarned = 512000;
   g.perks = { capital: 2, tooling: 1, union: 1 };
   g.dayTime = FAB.TUNE.dayLength * 0.45;
-  g.stats = { completed: 41, late: 2, earned: 39800, bestDay: 4200 };
+  g.stats = { completed: 41, late: 2, earned: 39800, bestDay: 4200, bestQuality: 91 };
 
   var setup = { cut: [4, 2], bend: [3, 1], weld: [4, 1], finish: [2, 0],
                 laser: [3, 1], mill: [2, 0], coat: [2, 1] };
@@ -64,6 +65,12 @@ function stageState() {
   });
 
   FAB.restockBoard();
+  // Goals this shop has already met are paid; the bar shows the next one.
+  g.goalsDone = {};
+  FAB.GOALS.forEach(function (def, i) {
+    var p = def.progress(g);
+    if (p[0] >= p[1]) g.goalsDone[i] = true;
+  });
 
   // Put real work on the machines at photogenic progress.
   var plan = [

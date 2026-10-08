@@ -16,9 +16,19 @@ content is available immediately.
 
 **Things reviewers often ask about this app**
 
-- There are no in-app purchases, no advertising, and no subscriptions.
-- There are no accounts, logins, or servers. The app makes no network requests;
-  everything runs from files bundled in the app and works in airplane mode.
+- **In-app purchases** are under **Upgrades -> Store** (scroll to the bottom of
+  the Upgrades tab). Two non-consumables and one consumable, all optional:
+  - `com.fabshoptycoon.game.double_pay` - Union Contract (non-consumable)
+  - `com.fabshoptycoon.game.night_crew` - Night Crew (non-consumable)
+  - `com.fabshoptycoon.game.big_contract` - Big Contract (consumable)
+
+  **Restore purchases** is directly beneath them. Buying the Union Contract
+  visibly doubles the pay on every order already on the board; the Big
+  Contract adds cash at once. Nothing in the game is locked behind a purchase.
+- There is no advertising and there are no subscriptions.
+- There are no accounts, logins, or servers. Apart from StoreKit, the app makes
+  no network requests; the game runs from files bundled in the app and works in
+  airplane mode.
 - The only stored data is local game progress, cleared by the **Reset shop**
   button under the Upgrades tab.
 - The app is portrait-only by design and opts out of iPad multitasking

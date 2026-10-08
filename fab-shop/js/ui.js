@@ -49,6 +49,36 @@
     el.nightShift = $('nightshift');
     el.nightShiftLede = $('nightshift-lede');
     el.nightShiftLines = $('nightshift-lines');
+    el.nightShiftUpsell = $('nightshift-upsell');
+    el.goal = $('goal');
+    el.goalText = $('goal-text');
+    el.goalReward = $('goal-reward');
+    el.goalFill = $('goal-fill');
+    el.storePanel = $('store-panel');
+    el.prefSound = $('pref-sound');
+    el.prefHaptics = $('pref-haptics');
+
+    if (FAB.feel) {
+      var prefs = FAB.feel.prefs();
+      el.prefSound.checked = prefs.sound;
+      el.prefHaptics.checked = prefs.haptics;
+      el.prefSound.addEventListener('change', function () { FAB.feel.set('sound', el.prefSound.checked); });
+      el.prefHaptics.addEventListener('change', function () { FAB.feel.set('haptics', el.prefHaptics.checked); });
+    }
+    $('btn-tutorial').addEventListener('click', function () {
+      if (!FAB.coach) return;
+      var floor = document.querySelector('.tab[data-view="floor"]');
+      if (floor) floor.click();
+      FAB.coach.start();
+    });
+    el.storePanel.addEventListener('click', onStoreClick);
+    el.nightShiftUpsell.addEventListener('click', function (ev) {
+      if (!ev.target.closest('button[data-goto-store]')) return;
+      el.nightShift.classList.add('hidden');
+      var tab = document.querySelector('.tab[data-view="upgrades"]');
+      if (tab) tab.click();
+      setTimeout(function () { el.storePanel.scrollIntoView({ block: 'start' }); }, 30);
+    });
 
     $('btn-manual').addEventListener('click', UI.showManual);
     $('manual-ok').addEventListener('click', function () {
@@ -220,7 +250,8 @@
   function onStationTap(key, root, ev) {
     var hit = FAB.tapStation(key);
     if (!hit) return;
-    if (navigator.vibrate && hit.result === 'perfect') navigator.vibrate(12);
+    if (FAB.feel) FAB.feel.hit(hit.result);
+    if (FAB.coach) FAB.coach.tapped();
 
     var spark = document.createElement('span');
     spark.className = 'spark';
@@ -357,6 +388,71 @@
     el.upgradesBadge.classList.toggle('hidden', !affordable);
   }
 
+  /* The goal line updates every frame - progress like reputation moves
+     without anything marking the lists dirty - but only touches the DOM when
+     what it shows has actually changed. */
+  var goalShown = '';
+  function renderGoal() {
+    var goal = FAB.currentGoal();
+    var key = goal ? goal.index + ':' + goal.have : 'none';
+    if (key === goalShown) return;
+    goalShown = key;
+    el.goal.classList.toggle('hidden', !goal);
+    if (!goal) return;
+    el.goalText.textContent = goal.text + (goal.need > 1 ? ' (' + goal.have.toLocaleString('en-US') +
+      '/' + goal.need.toLocaleString('en-US') + ')' : '');
+    el.goalReward.textContent = goal.reward;
+    el.goalFill.style.width = Math.min(100, goal.have / goal.need * 100).toFixed(1) + '%';
+  }
+
+  function renderStore() {
+    var store = FAB.store;
+    if (!store || !store.provider) {
+      // The web build cannot take payments; say where they are instead of
+      // showing buttons that do nothing.
+      el.storePanel.innerHTML = '<h3>Store</h3>' +
+        '<div class="empty store-note">Extras like the Union Contract are sold in the ' +
+        'iPhone and Android apps.</div>';
+      return;
+    }
+    if (store.loading) {
+      el.storePanel.innerHTML = '<h3>Store</h3><div class="empty">Reaching the store…</div>';
+      return;
+    }
+    if (!store.available) {
+      el.storePanel.innerHTML = '<h3>Store</h3><div class="empty">The store is not reachable right now.</div>';
+      return;
+    }
+    var items = FAB.STORE_ITEMS.map(function (item) {
+      var have = item.kind === 'unlock' && FAB.owns(item.key);
+      var price = store.prices[item.key];
+      var desc = typeof item.desc === 'function' ? item.desc() : item.desc;
+      var busy = store.busy === item.key;
+      return '<div class="card store-item' + (have ? ' maxed' : '') + '">' +
+        '<div class="card-body">' +
+          '<div class="card-title">' + item.name + '</div>' +
+          '<div class="card-sub">' + desc + '</div>' +
+        '</div>' +
+        (have
+          ? '<div class="card-sub owned-tag">OWNED</div>'
+          : '<button class="btn btn-small" data-buy="' + item.key + '"' +
+            (!price || store.busy ? ' disabled' : '') + '>' +
+            (busy ? '…' : (price || '—')) + '</button>') +
+      '</div>';
+    }).join('');
+    el.storePanel.innerHTML = '<h3>Store</h3>' + items +
+      '<button type="button" class="link-btn restore-btn" data-restore="1"' +
+        (store.busy ? ' disabled' : '') + '>' +
+        (store.busy === 'restore' ? 'Restoring…' : 'Restore purchases') + '</button>';
+  }
+
+  function onStoreClick(ev) {
+    var buy = ev.target.closest('button[data-buy]');
+    if (buy && !buy.disabled) { FAB.store.buy(buy.dataset.buy); return; }
+    var restore = ev.target.closest('button[data-restore]');
+    if (restore && !restore.disabled) FAB.store.restore();
+  }
+
   function renderPrestige() {
     var g = FAB.game;
     var passive = Math.round(g.blueprintsTotal * FAB.PRESTIGE.passivePayPerBlueprint * 100);
@@ -405,7 +501,8 @@
       '<dt>Best day</dt><dd>' + money(st.bestDay || 0) + '</dd>' +
       '<dt>Best shop</dt><dd>' + money(st.bestRun || 0) + '</dd>' +
       '<dt>This shop so far</dt><dd>' + money(g.runEarned) + '</dd>' +
-      '<dt>Shops run</dt><dd>' + (g.runs + 1) + '</dd>';
+      '<dt>Shops run</dt><dd>' + (g.runs + 1) + '</dd>' +
+      '<dt>Goals met</dt><dd>' + FAB.goalsCompleted(g) + ' of ' + FAB.GOALS.length + '</dd>';
 
     el.perkList.innerHTML = FAB.PERKS.map(function (def) {
       var owned = g.perks[def.key] || 0;
@@ -511,6 +608,12 @@
       (n.levels ? '<dt>Shop levels gained</dt><dd class="pos">+' + n.levels + '</dd>' : '') +
       '<dt>Day</dt><dd>' + FAB.game.day + ' (unchanged)</dd>' +
       (n.ranDry ? '<dt>Note</dt><dd>crew ran out of work</dd>' : '');
+    var pitch = FAB.store && FAB.store.available && !FAB.owns('night_crew');
+    el.nightShiftUpsell.classList.toggle('hidden', !pitch);
+    el.nightShiftUpsell.innerHTML = pitch
+      ? (n.nightCrew ? '' : 'A <b>Night Crew</b> would have done twice this, and keeps going for 12 days. ') +
+        '<button type="button" class="link-btn" data-goto-store="1">See the store</button>'
+      : '';
     el.nightShift.classList.remove('hidden');
     dirty = true;
   };
@@ -550,6 +653,9 @@
      the simulation actually does rather than a description that drifts. */
   UI.showManual = function () {
     var T = FAB.TUNE;
+    var crew = FAB.owns && FAB.owns('night_crew') ? 2 : 1;
+    var awayDaysPerHour = 3600 * T.offlineWorkPerSecond * crew / T.dayLength;
+    var awayCap = T.offlineMaxDays * crew;
     var signed = function (n) { return (n > 0 ? '+' : '') + n; };
     var row = function (label, value, dir) {
       return '<tr><td>' + label + '</td><td class="' + dir + '">' + value + '</td></tr>';
@@ -613,9 +719,15 @@
 
       '<h3>While you are away</h3>' +
       '<p>Hired operators keep working the jobs on the floor when the app is ' +
-      'closed - about a day and a half of machine time per hour away, up to ' +
-      T.offlineMaxDays + ' days. The calendar waits for you, so nothing goes late ' +
-      'while you are gone, and nothing runs at all without operators.</p>' +
+      'closed - about ' + (awayDaysPerHour < 2 ? 'a day and a half' : 'three days') +
+      ' of machine time per hour away, up to ' + awayCap + ' days. The calendar ' +
+      'waits for you, so nothing goes late while you are gone, and nothing runs ' +
+      'at all without operators.</p>' +
+
+      '<h3>Goals</h3>' +
+      '<p>The bar above the machines is your next goal. Each one pays its bonus ' +
+      'the moment you meet it, in any order, and the list carries across every ' +
+      'shop you own - ' + FAB.GOALS.length + ' in all.</p>' +
 
       '<h3>Selling up</h3>' +
       '<p>From shop level ' + FAB.PRESTIGE.minLevel + ' you can sell the shop and ' +
@@ -660,8 +772,12 @@
       renderRack();
       renderBoard();
       renderUpgrades();
+      renderStore();
       renderPrestige();
     }
+
+    renderGoal();
+    if (FAB.coach) FAB.coach.frame();
 
     el.money.textContent = money(g.money);
     el.day.textContent = g.day;
@@ -713,6 +829,9 @@
       else if (ev.type === 'money') UI.flash(el.money, 'flash-good');
       else if (ev.type === 'dayEnd') { UI.showReport(ev.report); dirty = true; }
       else if (ev.type === 'prestige') { dirty = true; }
+      else if (ev.type === 'shipped' && FAB.feel) { if (ev.late) FAB.feel.bad(); else FAB.feel.ship(); }
+      else if (ev.type === 'levelUp' && FAB.feel) FAB.feel.levelUp();
+      else if ((ev.type === 'goal' || ev.type === 'purchase') && FAB.feel) { FAB.feel.reward(); dirty = true; }
       else if (ev.type === 'event') { dirty = true; UI.showEventIfPending(); }
     }
   };

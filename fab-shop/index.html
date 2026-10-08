@@ -40,6 +40,12 @@
         aria-label="How the shop works">?</button></h2>
       <p class="hint">Tap a running machine when the marker hits the green band.</p>
     </div>
+    <div id="goal" class="goal hidden" aria-live="polite">
+      <div class="goal-top"><span class="goal-label">Goal</span>
+        <span id="goal-text" class="goal-text"></span>
+        <span id="goal-reward" class="goal-reward"></span></div>
+      <div class="goal-bar"><div id="goal-fill" class="goal-fill"></div></div>
+    </div>
     <div id="stations" class="stations"></div>
     <div class="rack">
       <h3>Steel Rack <span id="rack-count" class="pill">0/3</span>
@@ -65,9 +71,17 @@
     </div>
     <div id="upgrade-shop" class="upgrade-list"></div>
     <div id="upgrade-machines" class="upgrade-list"></div>
+    <div id="store-panel" class="upgrade-list store-panel"></div>
+
+    <h3 class="perk-head">Settings</h3>
+    <div class="settings">
+      <label class="setting"><span>Sound</span><input id="pref-sound" type="checkbox"></label>
+      <label class="setting"><span>Vibration</span><input id="pref-haptics" type="checkbox"></label>
+      <button id="btn-tutorial" class="btn btn-small btn-quiet" type="button">Replay the tutorial</button>
+    </div>
     <div class="danger-zone">
       <button id="btn-reset" class="btn btn-ghost" type="button">Reset shop</button>
-      <p class="legal"><a href="support.html">Support</a> &middot; <a href="privacy.html">Privacy policy</a> &middot; <span id="app-version">v1.5.0</span></p>
+      <p class="legal"><a href="support.html">Support</a> &middot; <a href="privacy.html">Privacy policy</a> &middot; <span id="app-version">v1.6.0</span></p>
     </div>
   </section>
 
@@ -118,6 +132,7 @@
     <h2 id="nightshift-title">While you were out</h2>
     <p id="nightshift-lede" class="relocate-note"></p>
     <dl id="nightshift-lines" class="report-lines"></dl>
+    <p id="nightshift-upsell" class="upsell hidden"></p>
     <button id="nightshift-ok" class="btn btn-primary" type="button">Back to work</button>
   </div>
 </div>
@@ -132,8 +147,11 @@
 
 <script src="js/data.js"></script>
 <script src="js/game.js"></script>
+<script src="js/feel.js"></script>
 <script src="js/ui.js"></script>
+<script src="js/coach.js"></script>
 <script src="js/native.js"></script>
+<script src="js/store.js"></script>
 <script src="js/main.js"></script>
 </body>
 </html>

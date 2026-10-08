@@ -497,3 +497,84 @@ h3 { font-size: 14px; color: var(--muted); text-transform: uppercase; }
 @media (prefers-reduced-motion: reduce) {
   * { animation-duration: .01ms !important; transition-duration: .01ms !important; }
 }
+
+/* ---------- Goals ---------- */
+
+.goal {
+  margin-bottom: 10px;
+  padding: 9px 12px 10px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+.goal-top { display: flex; align-items: baseline; gap: 8px; font-size: 13px; }
+.goal-label {
+  font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--orange);
+}
+.goal-text { flex: 1; min-width: 0; }
+.goal-reward { color: var(--gold); font-weight: 700; font-size: 12px; white-space: nowrap; }
+.goal-bar { margin-top: 7px; height: 5px; border-radius: 3px; background: var(--panel-2); overflow: hidden; }
+.goal-fill { height: 100%; width: 0; background: var(--orange); transition: width .25s ease-out; }
+
+/* ---------- Tutorial ---------- */
+
+.coach {
+  position: fixed;
+  left: var(--pad);
+  right: var(--pad);
+  max-width: 420px;
+  margin: 0 auto;
+  padding: 12px 14px 10px;
+  background: #22303d;
+  border: 1px solid var(--arc);
+  border-radius: 14px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.45);
+  z-index: 25;           /* above the floor, below the modal cards */
+  animation: toastIn .2s ease-out;
+}
+.coach-text { margin: 0; font-size: 14px; line-height: 1.45; }
+.coach-text b { color: var(--arc); }
+.coach-actions { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; }
+.coach-skip {
+  padding: 8px 0; border: 0; background: none; font: inherit; font-size: 12px;
+  color: var(--muted); text-decoration: underline; cursor: pointer;
+}
+.coach-target {
+  outline: 2px solid var(--arc);
+  outline-offset: 3px;
+  border-radius: 10px;
+  animation: coachPulse 1.4s ease-in-out infinite;
+}
+@keyframes coachPulse {
+  0%, 100% { outline-color: rgba(88,199,255,1); }
+  50% { outline-color: rgba(88,199,255,.25); }
+}
+
+/* ---------- Store + settings ---------- */
+
+.store-panel { margin-top: 22px; }
+.store-panel h3 { margin: 0 0 2px; }
+.store-note { padding: 14px 12px; }
+.owned-tag { color: var(--good); font-weight: 700; }
+.link-btn {
+  padding: 10px 0; border: 0; background: none; font: inherit; font-size: 13px;
+  color: var(--arc); text-decoration: underline; cursor: pointer;
+}
+.link-btn[disabled] { color: var(--muted); }
+.restore-btn { align-self: center; }
+
+.upsell { margin: 12px 0 0; font-size: 12px; color: var(--muted); }
+.upsell b { color: var(--text); }
+
+.settings {
+  display: flex; flex-direction: column; gap: 2px; margin-top: 8px;
+  padding: 4px 14px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+}
+.setting {
+  display: flex; align-items: center; justify-content: space-between;
+  min-height: 48px; font-size: 14px; cursor: pointer;
+  border-bottom: 1px solid var(--line);
+}
+.setting input { width: 40px; height: 22px; accent-color: var(--orange); }
+.btn-quiet { margin: 8px 0; background: var(--panel-2); color: var(--text); }

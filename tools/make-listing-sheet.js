@@ -33,6 +33,18 @@ var title = read('store/play/listing/en-US/title.txt');
 var short = read('store/play/listing/en-US/short-description.txt');
 var full = read('store/play/listing/en-US/full-description.txt');
 var notes = read('store/play/whatsnew/whatsnew-en-US');
+var products = JSON.parse(read('store/products.json')).products;
+
+function productBlock(p) {
+  return [
+    'Product ID        ' + p.id,
+    'Type              ' + p.play_type,
+    'Name              ' + p.name,
+    'Description       ' + p.play_description,
+    'Price             USD ' + p.price_usd + ' (Play converts other currencies)',
+    ''
+  ].join('\n');
+}
 
 function field(label, limit, text) {
   var n = Array.from(text).length;
@@ -102,13 +114,16 @@ var out = [
   'Privacy policy          https://fab-shop-tycoon.onrender.com/privacy.html',
   'App access              All functionality available without special access.',
   'Ads                     No, my app does not contain ads.',
-  'Content rating          Category: Game. Answer No to every content question.',
+  '                        (In-app purchases are not ads.)',
+  'Content rating          Category: Game. No to every content question; Yes to',
+  '                        "allows purchases of digital goods".',
   '                        Expected: ESRB Everyone / PEGI 3 / USK 0.',
   '                        Full answers: store/play/content-rating.md',
   'Target audience         13+ recommended. Declaring under-13 pulls the app',
   '                        into Families policy and its extra requirements.',
   'Data safety             No data collected, none shared, no third-party SDKs.',
-  '                        Save data stays in local storage on the device.',
+  '                        Save data and owned-purchase flags stay on the device;',
+  '                        payments are handled by Google Play billing.',
   '                        Full answers: store/play/data-safety.md',
   'Government apps         No.      Financial features  None of these.',
   'Health apps             No.      News apps           No.',
@@ -118,8 +133,17 @@ var out = [
   'PRICING  ->  Monetise > Pricing',
   '-'.repeat(78),
   '',
-  'Free. No in-app purchases, no subscriptions, no ads.',
+  'Free, with optional in-app purchases. No subscriptions, no ads.',
   '',
+  '-'.repeat(78),
+  'IN-APP PRODUCTS  ->  Monetise > Products > One-time products',
+  '-'.repeat(78),
+  '',
+  'Needs a payments profile (Setup > Payments profile) and a bundle with the',
+  'BILLING permission uploaded to any track first - 1.6.0 and later carry it.',
+  'Create each one, set it Active, and match the ID exactly.',
+  '',
+  products.map(productBlock).join('\n'),
   '-'.repeat(78),
   'NOTES',
   '-'.repeat(78),

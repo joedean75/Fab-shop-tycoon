@@ -11,10 +11,12 @@
   FAB.events = [];
 
   var silent = false;      // set while simulating time the player did not watch
+  var QUIET_WHEN_SILENT = { toast: 1, money: 1, shipped: 1, levelUp: 1, goal: 1 };
   var opsAdvanced = 0;     // operations finished during that simulation
 
   function emit(type, payload) {
-    if (silent && (type === 'toast' || type === 'money')) return;
+    // Time the player did not watch makes no noise: no toasts, no sounds.
+    if (silent && QUIET_WHEN_SILENT[type]) return;
     payload = payload || {};
     payload.type = type;
     FAB.events.push(payload);
@@ -74,7 +76,8 @@
       blueprintsTotal: meta.blueprintsTotal || 0,
       perks: meta.perks || {},
       runs: meta.runs || 0,
-      stats: meta.stats || { completed: 0, late: 0, earned: 0, bestDay: 0, bestRun: 0 }
+      goalsDone: meta.goalsDone || {},
+      stats: meta.stats || { completed: 0, late: 0, earned: 0, bestDay: 0, bestRun: 0, bestQuality: 0 }
     };
     FAB.game = g;
     /* A hand on every machine the shop opens with. One operator was not
@@ -113,6 +116,37 @@
   FAB.startRun = startRun;
 
   FAB.money = function (n) { return '$' + Math.round(n).toLocaleString('en-US'); };
+
+  /* ---------- purchases ----------
+     What the player bought lives in store.js, outside the save. The
+     simulation only asks whether something is owned, so it runs the same
+     with no store at all (the web build, the balance scripts). */
+
+  function owns(key) { return !!(FAB.owns && FAB.owns(key)); }
+
+  function premiumPayMult() { return owns('double_pay') ? 2 : 1; }
+  FAB.premiumPayMult = premiumPayMult;
+
+  /* Offers carry their pay from the moment they post, so the Union Contract
+     also doubles the work already on the board and the floor - the player
+     sees what they bought straight away. Called once, when it is granted. */
+  FAB.applyDoublePay = function (g) {
+    g.board.forEach(function (o) { o.pay *= 2; });
+    g.jobs.forEach(function (j) { j.pay *= 2; });
+  };
+
+  // Three of the shop's best days, never less than a decent early boost.
+  FAB.contractValue = function (g) {
+    g = g || FAB.game;
+    var best = (g && g.stats && g.stats.bestDay) || 0;
+    return Math.max(2500, Math.round(best * 3 / 50) * 50);
+  };
+
+  FAB.grantContract = function (g) {
+    var amount = FAB.contractValue(g);
+    g.money += amount;
+    return amount;
+  };
 
   /* ---------- timed modifiers ----------
      Events leave effects behind that last a few days: a machine down, a spare
@@ -218,7 +252,7 @@
       ? pool[Math.floor(rand(pool.length / 2, pool.length))]
       : pick(pool);
     var rush = Math.random() < 0.22;
-    var pay = product.pay * rand(0.9, 1.15) * FAB.repMult() * FAB.game.payMult;
+    var pay = product.pay * rand(0.9, 1.15) * FAB.repMult() * FAB.game.payMult * premiumPayMult();
     if (rush) pay *= 1.45;
     return {
       uid: 'o' + (++uid),
@@ -236,7 +270,7 @@
      event still fires for a player running a full floor, which is most of
      them, without quietly breaking the work-in-progress limit. */
   FAB.addRushJob = function (g, product) {
-    var pay = Math.round(product.pay * 1.6 * FAB.repMult() * g.payMult / 5) * 5;
+    var pay = Math.round(product.pay * 1.6 * FAB.repMult() * g.payMult * premiumPayMult() / 5) * 5;
     var due = g.day + Math.max(1, product.days - 1);
 
     if (g.jobs.length >= g.wipMax) {
@@ -461,6 +495,7 @@
     g.stats.earned += payout;
     g.runEarned += payout;
     if (g.runEarned > g.stats.bestRun) g.stats.bestRun = g.runEarned;
+    if (job.quality > (g.stats.bestQuality || 0)) g.stats.bestQuality = job.quality;
 
     if (late) {
       g.ledger.late += 1;
@@ -478,6 +513,7 @@
 
     g.jobs = g.jobs.filter(function (j) { return j.uid !== job.uid; });
     emit('money', { amount: payout });
+    emit('shipped', { late: late, quality: job.quality });
     emit('toast', {
       text: (late ? 'LATE: ' : 'Shipped ') + product.name + ' +$' + payout +
             ' (Q' + Math.round(job.quality) + ')',
@@ -493,6 +529,7 @@
       g.xp -= FAB.xpForLevel(g.level);
       g.level += 1;
       emit('toast', { text: 'Shop level ' + g.level + '! New work on the board.', tone: 'good' });
+      emit('levelUp', { level: g.level });
       FAB.STATIONS.forEach(function (def) {
         if (def.unlockLevel !== g.level) return;
         /* A new machine arrives with a hand on it. An unstaffed station is a
@@ -690,6 +727,82 @@
     return true;
   };
 
+  /* ---------- goals ----------
+     Each goal pays the moment it is met, in any order, so one the player
+     finds hard never holds the rest back. The floor shows the earliest one
+     still open. */
+
+  function goalMet(g, i) {
+    var p = FAB.GOALS[i].progress(g);
+    return p[0] >= p[1];
+  }
+
+  FAB.currentGoal = function (g) {
+    g = g || FAB.game;
+    if (!g) return null;
+    var done = g.goalsDone || {};
+    for (var i = 0; i < FAB.GOALS.length; i++) {
+      if (done[i]) continue;
+      var def = FAB.GOALS[i];
+      var p = def.progress(g);
+      return {
+        index: i,
+        text: def.text,
+        have: Math.min(p[0], p[1]),
+        need: p[1],
+        reward: def.blueprints
+          ? def.blueprints + ' blueprint' + (def.blueprints === 1 ? '' : 's')
+          : FAB.money(def.cash)
+      };
+    }
+    return null;
+  };
+
+  FAB.goalsCompleted = function (g) {
+    g = g || FAB.game;
+    return Object.keys((g && g.goalsDone) || {}).length;
+  };
+
+  // Pays out one met goal per call, so a burst of progress still lands the
+  // rewards one at a time, each with its own moment.
+  function checkGoal() {
+    var g = FAB.game;
+    if (!g.goalsDone) g.goalsDone = {};
+    for (var i = 0; i < FAB.GOALS.length; i++) {
+      if (g.goalsDone[i] || !goalMet(g, i)) continue;
+      var def = FAB.GOALS[i];
+      if (def.blueprints) {
+        g.blueprints += def.blueprints;
+        g.blueprintsTotal += def.blueprints;
+        g.payMult += def.blueprints * FAB.PRESTIGE.passivePayPerBlueprint;
+      } else {
+        g.money += def.cash;
+      }
+      g.goalsDone[i] = true;
+      emit('goal', { text: def.text });
+      emit('toast', {
+        text: 'Goal done: ' + def.text + ' - ' +
+          (def.blueprints ? '+' + def.blueprints + ' blueprints' : '+' + FAB.money(def.cash)),
+        tone: 'good'
+      });
+      emit('dirty');
+      return true;
+    }
+    return false;
+  }
+  FAB.checkGoal = checkGoal;
+
+  /* A save from before goals existed has a history already. Mark what it has
+     met as done without paying, so a veteran is not showered with a dozen
+     rewards on their first frame of the new version. */
+  function markMetGoals(g) {
+    for (var i = 0; i < FAB.GOALS.length; i++) {
+      if (goalMet(g, i)) g.goalsDone[i] = true;
+    }
+  }
+
+  var goalClock = 0;
+
   /* ---------- main tick ---------- */
 
   FAB.tick = function (dt) {
@@ -698,6 +811,8 @@
 
     g.dayTime += dt;
     trickleOffers(dt);
+    goalClock += dt;
+    if (goalClock >= 0.5) { goalClock = 0; checkGoal(); }
     if (g.dayTime >= T.dayLength) closeDay();
 
     routeJobs();
@@ -813,9 +928,11 @@
 
     if (realSeconds < T.offlineMinSeconds) return null;
 
-    // Convert absence into machine time, bounded in in-game days.
-    var ceiling = T.offlineMaxDays * T.dayLength;
-    var machineSeconds = Math.min(realSeconds * T.offlineWorkPerSecond, ceiling);
+    // Convert absence into machine time, bounded in in-game days. The Night
+    // Crew works twice as fast and twice as long.
+    var crew = owns('night_crew') ? 2 : 1;
+    var ceiling = T.offlineMaxDays * crew * T.dayLength;
+    var machineSeconds = Math.min(realSeconds * T.offlineWorkPerSecond * crew, ceiling);
 
     var staffed = g.stations.some(function (st) {
       return st.operators > 0 && FAB.isStationUnlocked(st.key);
@@ -850,7 +967,8 @@
     var summary = {
       away: realSeconds,
       days: machineSeconds / T.dayLength,
-      capped: realSeconds * T.offlineWorkPerSecond > ceiling,
+      capped: realSeconds * T.offlineWorkPerSecond * crew > ceiling,
+      nightCrew: crew > 1,
       ranDry: idleFloor && g.jobs.length > 0,   // crew ran out of staffed work
       shipped: g.stats.completed - before.completed,
       earned: g.stats.earned - before.earned,
@@ -862,6 +980,7 @@
       summary.idle = true;
       summary.reason = 'toosoon';
     }
+    checkGoal();
     FAB.save();
     return summary;
   };
@@ -894,6 +1013,7 @@
       blueprintsTotal: g.blueprintsTotal + gain,
       perks: g.perks,
       runs: g.runs + 1,
+      goalsDone: g.goalsDone,
       stats: g.stats
     };
     startRun(meta);
@@ -978,6 +1098,8 @@
       if (g.pendingEvent && !FAB.EVENT_BY_KEY[g.pendingEvent.key]) g.pendingEvent = null;
       if (!g.stats) g.stats = { completed: 0, late: 0, earned: 0, bestDay: 0, bestRun: 0 };
       if (typeof g.stats.bestRun !== 'number') g.stats.bestRun = 0;
+      if (typeof g.stats.bestQuality !== 'number') g.stats.bestQuality = 0;
+      if (!g.goalsDone || typeof g.goalsDone !== 'object') { g.goalsDone = {}; markMetGoals(g); }
       // An old save has earnings but no run total; seed it so the first
       // relocation credits work already done.
       if (!g.runEarned && g.stats.earned) g.runEarned = g.stats.earned;

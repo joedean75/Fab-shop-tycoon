@@ -28,14 +28,14 @@ tools/               verification and asset generation scripts
 
 ## What still needs a human
 
-These need accounts, money, or a Mac, and cannot be automated from here.
+These need accounts or money, and cannot be automated from here.
 
 | Step | Where | Notes |
 | --- | --- | --- |
 | Google Play developer account | play.google.com/console | One-time 25 USD. |
 | Apple Developer Program | developer.apple.com | 99 USD per year. Required even for a free app. |
 | Create the upload keystore | local machine | See below. Losing it means you can never update the app. |
-| Build and upload the iOS archive | a Mac with Xcode | Or let the `ios-release` workflow do it on a macOS runner. |
+| Build and upload the iOS archive | GitHub Actions | The `ios-release` workflow, on GitHub's Mac. No Mac of your own needed. |
 | Fill the store forms | both consoles | Answers are in `store/play/*.md` and `store/appstore/*.md`. |
 
 ## Android
@@ -82,6 +82,40 @@ To automate it: add `ANDROID_KEYSTORE_BASE64` (`base64 -w0 upload.jks`),
 
 ## iOS
 
+### Without a Mac (the normal route)
+
+The **iOS release (App Store)** workflow builds on GitHub's macOS runner and
+uploads straight to TestFlight. It uses Xcode's cloud-managed signing: the
+App Store Connect API key is the only credential, and Xcode creates the
+distribution certificate and the App Store profile itself. There is no `.p12`
+or `.mobileprovision` to make or store.
+
+1. App Store Connect -> Users and Access -> Integrations -> App Store Connect
+   API -> **Team Keys** -> generate a key with the **Admin** role (cloud
+   signing needs Admin to create the certificate). Download the `.p8` - Apple
+   lets you download it once.
+2. GitHub -> the repo -> Settings -> Secrets and variables -> Actions -> add:
+
+   | Secret | Value |
+   | --- | --- |
+   | `APPLE_TEAM_ID` | Team ID, developer.apple.com -> Account -> Membership |
+   | `APPSTORE_API_KEY_ID` | the key's Key ID |
+   | `APPSTORE_API_ISSUER_ID` | the Issuer ID above the key list |
+   | `APPSTORE_API_PRIVATE_KEY` | the whole `.p8` file, BEGIN and END lines included |
+
+3. Actions -> **iOS release (App Store)** -> Run workflow (branch `main`).
+   The build appears under TestFlight 10-30 minutes after the run finishes.
+
+Each run uploads as build `<versionCode>.<run number>` (1.6.0 run 14 is
+`10600.14`), so re-running never collides with a build Apple already has.
+Pushing a `v*` tag runs it too.
+
+The archive is built unsigned and signed at export. Signing the archive would
+need a development profile, which Apple only issues to a team with a
+registered iPhone; distribution signing has no such rule.
+
+### With a Mac
+
 Requires macOS and Xcode; the rest of this repo does not.
 
 ```sh
@@ -99,17 +133,48 @@ In Xcode: select the **App** target -> Signing & Capabilities -> pick your team.
 The bundle identifier is already `com.fabshoptycoon.game`. Product -> Archive,
 then distribute to App Store Connect.
 
-In App Store Connect: create the app, set App Privacy to **Data Not Collected**
+In App Store Connect: create the app, set up the in-app purchases (above), set App Privacy to **Data Not Collected**
 (`store/appstore/app-privacy.md`), paste the listing from
 `store/appstore/listing/en-US/`, upload screenshots from
 `store/appstore/screenshots/`, and paste `store/appstore/review-notes.md` into
 the review notes field.
 
-To automate it: add `APPLE_CERTIFICATE_P12`, `APPLE_CERTIFICATE_PASSWORD`,
-`APPLE_PROVISIONING_PROFILE`, `APPLE_TEAM_ID`, `APPSTORE_API_KEY_ID`,
-`APPSTORE_API_ISSUER_ID` and `APPSTORE_API_PRIVATE_KEY` as secrets, then run the
-**iOS release (App Store)** workflow. Without those secrets the workflow still
-compiles the app for the simulator, so the project is checked on every run.
+Without the four secrets the release workflow still compiles the app for the
+simulator, so the project is checked on every run.
+
+## In-app purchases
+
+Three products, defined once in `store/products.json` (ids, types, names,
+descriptions, suggested prices) and sold by `fab-shop/js/store.js` through
+`@capgo/native-purchases` - StoreKit 2 on iOS, Play Billing on Android. There
+is no server and no RevenueCat-style account: the stores are the record of
+what was bought, and the game re-reads it on every launch.
+
+| Id | Apple type | Play | Suggested |
+| --- | --- | --- | --- |
+| `com.fabshoptycoon.game.double_pay` | Non-Consumable | one-time, never consumed | $4.99 |
+| `com.fabshoptycoon.game.night_crew` | Non-Consumable | one-time, never consumed | $2.99 |
+| `com.fabshoptycoon.game.big_contract` | Consumable | one-time, consumed by the app | $0.99 |
+
+Before anything can be sold:
+
+- **Apple** - sign the **Paid Apps Agreement** and fill in banking and tax
+  (App Store Connect -> Business). Create the three products under the app's
+  **Monetization -> In-App Purchases**, each with a review screenshot of the
+  store panel, then attach them to the version you submit. Test with a
+  **Sandbox** account (Users and Access -> Sandbox) on a TestFlight build.
+- **Google** - set up a **payments profile**, upload a 1.6.0+ bundle to any
+  track (Play will not let you create products until a build with the
+  BILLING permission exists), then create the three one-time products. Add
+  your testers under **License testing** so their purchases are not charged.
+
+`npm run check:store` fails if a product id in `products.json` does not match
+what the game requests - a one-character mismatch otherwise shows up only as a
+store panel with no price on it.
+
+Purchases are stored outside the save (`fabshop.entitlements.v1`), so **Reset
+shop** and selling up never remove them; **Restore purchases** under the store
+re-reads them from the account.
 
 ## Releasing a new version
 

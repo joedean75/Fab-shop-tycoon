@@ -13,8 +13,11 @@ PEGI 3, USK 0) in every territory.
 | Horror or fear themes | No |
 | User-generated content or user interaction | No |
 | Shares user location | No |
-| Allows purchases of digital goods | No |
+| Allows purchases of digital goods | **Yes** (in-app purchases) |
 | Ads | No |
+
+The purchases answer does not change the age rating; it adds the
+"In-app purchases" notice to the listing, which Play requires.
 
 Notes for the questionnaire: the game depicts industrial fabrication work
 (cutting, bending, welding metal). There is no depiction of injury, blood, or
