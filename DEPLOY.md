@@ -19,20 +19,30 @@ Identity (permanent - both stores already know it):
 - Support **corvuscompanies6@gmail.com**, privacy https://fab-shop-tycoon.onrender.com/privacy.html,
   support page https://fab-shop-tycoon.onrender.com/support.html
 
-The Fab Shop Toolkit now lives in its own repo with its own guide
+The sister app, Fab Shop Toolkit, has its own repo and guide
 (`joedean75/fab-shop-toolkit`, `DEPLOY.md`).
 
 ---
 
-## 1. Website (Render) - nothing to do
+## 1. Website (Render) - point it at this repo, once
 
-Service `fab-shop-tycoon` builds `main` with `node tools/verify-deploy.js` and serves `fab-shop/`.
-Merging to `main` deploys it within a couple of minutes. To check what is live:
+The game moved here from the `projects` repo, and its Render service still builds from there.
+Point it here (2 minutes):
+
+1. Open https://dashboard.render.com/static/srv-daldsge7bikc73fvhbig -> **Settings** ->
+   **Build & Deploy**.
+2. **Repository** -> Edit -> `joedean75/fab-shop-tycoon`. If it is not listed, "Configure GitHub"
+   and give Render's GitHub app access to `fab-shop-tycoon`, then pick it.
+3. **Branch** `main`. Build command (`node tools/verify-deploy.js`) and publish directory
+   (`fab-shop`) stay as they are.
+4. Save -> **Manual Deploy -> Deploy latest commit**.
+
+After that, every merge to `main` here deploys within a couple of minutes. To check what is live:
 `npm run smoke https://fab-shop-tycoon.onrender.com`.
 
 ## 2. GitHub secrets (once)
 
-**github.com/joedean75/projects -> Settings -> Secrets and variables -> Actions -> New repository
+**github.com/joedean75/fab-shop-tycoon -> Settings -> Secrets and variables -> Actions -> New repository
 secret.** Paste each value exactly.
 
 | Secret | Value | Used by |
@@ -46,7 +56,7 @@ secret.** Paste each value exactly.
 
 No API key yet: Team Keys -> **+** -> name "GitHub", access **Admin** (cloud signing needs Admin) ->
 Generate -> **Download** (Apple allows it once - keep the file). The same key also serves the
-toolkit repo.
+toolkit repo. Secrets set earlier in the `projects` repo do not carry over - add them here.
 
 ## 3. Android - Google Play
 
