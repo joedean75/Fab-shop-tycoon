@@ -1,0 +1,63 @@
+name: Create Android upload key (run once)
+
+# Makes the key Play uses to recognise uploads from you, so you do not need
+# Java on your own computer. Run it once, download the result, then:
+#   1. keep upload-key.zip somewhere safe (a password manager or private drive),
+#   2. copy its values into this repo's secrets (DEPLOY.md, Android step A2),
+#   3. delete the artifact from the run page.
+# The download expires after one day either way. If the key is ever lost,
+# Play Console -> Setup -> App signing -> "Request upload key reset" replaces it.
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type CREATE to make a new upload key'
+        required: true
+        type: string
+
+jobs:
+  create:
+    if: inputs.confirm == 'CREATE'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-java@v4
+        with: { distribution: 'temurin', java-version: '21' }
+      - name: Generate the key
+        run: |
+          set -euo pipefail
+          umask 077
+          mkdir -p out
+          PASS=$(openssl rand -base64 24 | tr -d '/+=' | cut -c1-24)
+          echo "::add-mask::$PASS"
+          keytool -genkeypair -v -keystore out/upload.jks -alias upload \
+            -keyalg RSA -keysize 2048 -validity 10000 \
+            -storepass "$PASS" -keypass "$PASS" \
+            -dname "CN=Fab Shop Tycoon, O=Fab Shop Tycoon, C=US" > /dev/null 2>&1
+          base64 -w0 out/upload.jks > out/ANDROID_KEYSTORE_BASE64.txt
+          printf '%s' "$PASS" > out/ANDROID_KEYSTORE_PASSWORD.txt
+          printf '%s' "$PASS" > out/ANDROID_KEY_PASSWORD.txt
+          printf 'upload' > out/ANDROID_KEY_ALIAS.txt
+          keytool -list -v -keystore out/upload.jks -storepass "$PASS" -alias upload \
+            | grep -E 'SHA1:|SHA256:' > out/fingerprints.txt
+          # The public certificate: what Play asks for in an upload key reset.
+          keytool -export -rfc -keystore out/upload.jks -storepass "$PASS" -alias upload \
+            -file out/upload_certificate.pem > /dev/null 2>&1
+          cat > out/README.txt <<'TXT'
+          Fab Shop Tycoon - Android upload key
+
+          Each ANDROID_*.txt file holds the value for the GitHub secret of the
+          same name (repo Settings -> Secrets and variables -> Actions). Paste the
+          whole contents, nothing else.
+
+          upload_certificate.pem is the public half. Play asks for it only if you
+          replace an existing upload key (App integrity -> Request upload key reset).
+
+          Keep this folder somewhere safe and private. Anyone with it can sign
+          uploads as you. Play's own app signing key stays with Google.
+          TXT
+      - uses: actions/upload-artifact@v4
+        with:
+          name: upload-key
+          path: out/
+          retention-days: 1
+          if-no-files-found: error

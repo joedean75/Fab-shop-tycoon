@@ -14,10 +14,7 @@
     "ios:open": "cap open ios",
     "check:store": "node tools/check-store-metadata.js",
     "check": "npm run verify && node tools/set-version.js --check && npm run check:store",
-    "listing": "node tools/make-listing-sheet.js",
-    "test:tools": "node --test fab-tools/test/*.test.js",
-    "e2e:tools": "node fab-tools/test/e2e.js",
-    "verify:tools": "node tools/verify-tools.js"
+    "listing": "node tools/make-listing-sheet.js"
   },
   "dependencies": {
     "@capacitor/android": "^8.0.0",
