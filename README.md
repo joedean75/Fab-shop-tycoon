@@ -4,7 +4,8 @@
   Live at https://fab-shop-tycoon.onrender.com
 
 Mobile builds for the App Store and Google Play are wrapped with Capacitor in
-`ios/` and `android/`; see [`store/README.md`](store/README.md) to submit.
+`ios/` and `android/`. **Step-by-step release guide: [`DEPLOY.md`](DEPLOY.md)**;
+background and details in [`store/README.md`](store/README.md).
 
 The game is deployed from `main` to Render (`render.yaml`); `netlify.toml` is
 kept as an alternative host. `node tools/verify-deploy.js` checks the static
