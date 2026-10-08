@@ -19,6 +19,9 @@ Identity (permanent - both stores already know it):
 - Support **corvuscompanies6@gmail.com**, privacy https://fab-shop-tycoon.onrender.com/privacy.html,
   support page https://fab-shop-tycoon.onrender.com/support.html
 
+The Fab Shop Toolkit now lives in its own repo with its own guide
+(`joedean75/fab-shop-toolkit`, `DEPLOY.md`).
+
 ---
 
 ## 1. Website (Render) - nothing to do
