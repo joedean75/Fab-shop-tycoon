@@ -1,0 +1,27 @@
+name: Create App Store in-app purchases
+
+# Creates the three purchases from store/products.json in App Store Connect
+# (name, description, type, USD price, availability, review screenshot) using
+# the same API key as the iOS release. Safe to run again: anything that already
+# exists is left alone. Google Play products are set up in Play Console.
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Only list what would be created'
+        type: boolean
+        default: false
+
+jobs:
+  create:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '22' }
+      - name: Create the purchases
+        env:
+          APPSTORE_API_KEY_ID: ${{ secrets.APPSTORE_API_KEY_ID }}
+          APPSTORE_API_ISSUER_ID: ${{ secrets.APPSTORE_API_ISSUER_ID }}
+          APPSTORE_API_PRIVATE_KEY: ${{ secrets.APPSTORE_API_PRIVATE_KEY }}
+        run: node tools/create-iap.js ${{ inputs.dry_run && '--dry-run' || '' }}
