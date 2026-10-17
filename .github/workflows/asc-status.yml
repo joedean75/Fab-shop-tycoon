@@ -1,0 +1,21 @@
+name: App Store Connect status (read-only)
+
+# Prints where both apps stand in App Store Connect: versions, builds,
+# TestFlight state, beta groups, listing gaps and in-app purchases.
+# Changes nothing. Uses the release API key (same team for both apps).
+on:
+  workflow_dispatch:
+
+jobs:
+  status:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '22' }
+      - name: Status
+        env:
+          APPSTORE_API_KEY_ID: ${{ secrets.APPSTORE_API_KEY_ID }}
+          APPSTORE_API_ISSUER_ID: ${{ secrets.APPSTORE_API_ISSUER_ID }}
+          APPSTORE_API_PRIVATE_KEY: ${{ secrets.APPSTORE_API_PRIVATE_KEY }}
+        run: node tools/asc-status.js
