@@ -1,0 +1,39 @@
+name: Fill in the App Store listing
+
+# Writes the version page in App Store Connect from store/appstore/: version
+# number, build, copyright, category, text, URLs, App Review contact and
+# screenshots. Fields that already have a value are kept unless "overwrite" is
+# ticked; screenshot sets that already have images are never touched.
+on:
+  workflow_dispatch:
+    inputs:
+      copyright:
+        description: 'Copyright line'
+        default: '2026 Joseph Dean'
+      contact_first: { description: 'App Review contact first name', default: 'Joseph' }
+      contact_last: { description: 'App Review contact last name', default: 'Dean' }
+      contact_phone: { description: 'App Review contact phone', default: '+1 616 745 4597' }
+      contact_email: { description: 'App Review contact email', default: 'corvuscompanies6@gmail.com' }
+      overwrite:
+        description: 'Replace text fields that already have a value'
+        type: boolean
+        default: false
+
+jobs:
+  listing:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '22' }
+      - name: Fill in the listing
+        env:
+          APPSTORE_API_KEY_ID: ${{ secrets.APPSTORE_API_KEY_ID }}
+          APPSTORE_API_ISSUER_ID: ${{ secrets.APPSTORE_API_ISSUER_ID }}
+          APPSTORE_API_PRIVATE_KEY: ${{ secrets.APPSTORE_API_PRIVATE_KEY }}
+          COPYRIGHT: ${{ inputs.copyright }}
+          CONTACT_FIRST: ${{ inputs.contact_first }}
+          CONTACT_LAST: ${{ inputs.contact_last }}
+          CONTACT_PHONE: ${{ inputs.contact_phone }}
+          CONTACT_EMAIL: ${{ inputs.contact_email }}
+        run: node tools/asc-listing.js ${{ inputs.overwrite && '--overwrite' || '' }}
