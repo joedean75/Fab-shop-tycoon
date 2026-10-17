@@ -1,0 +1,12 @@
+{
+  "_comment": "Used by tools/asc-listing.js. Category ids are App Store Connect appCategories ids. Each screenshot folder goes to the first display type Apple accepts.",
+  "bundleId": "com.fabshoptycoon.game",
+  "primaryCategory": "GAMES",
+  "primarySubcategoryOne": "GAMES_SIMULATION",
+  "primarySubcategoryTwo": "GAMES_STRATEGY",
+  "screenshots": [
+    { "dir": "iphone-6.9", "types": ["APP_IPHONE_67"] },
+    { "dir": "iphone-6.3", "types": ["APP_IPHONE_61"] },
+    { "dir": "ipad-12.9", "types": ["APP_IPAD_PRO_3GEN_129", "APP_IPAD_PRO_129"] }
+  ]
+}
